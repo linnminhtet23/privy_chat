@@ -49,17 +49,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
       // print('Email: ${emailController.text}');
       // print('Password: ${passwordController.text}');
 
-        // await Provider.of<AuthProvider>(context, listen: false).signUp(
-        //   usernameController.text,
-        //   emailController.text,
-        //   passwordController.text,
-        //   profileUrl: null,
-        // );
+        await Provider.of<AuthProvider>(context, listen: false).signUp(
+          usernameController.text,
+          emailController.text,
+          passwordController.text,
+          profileUrl: null,
+        );
 
       // Implement your registration logic here
-      if(mounted){
-      Navigator.of(context).pop();
-      }
+      // if(mounted){
+      // Navigator.of(context).pop();
+      // }
     } else {
       return;
     }

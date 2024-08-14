@@ -7,62 +7,101 @@ class UserProvider with ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final NotificationUtils _notificationUtils = NotificationUtils();
 
+  // Fetches pending friend requests for a specific user
   Future<List<Map<String, dynamic>>> getFriendRequests(String userId) async {
-    final result = await _firestore.collection('friendRequests')
-      .where('receiverId', isEqualTo: userId)
-      .where('status', isEqualTo: 'pending')
-      .get();
-    return result.docs.map((doc) => {'id': doc.id, 'data': doc.data()}).toList();
+    final querySnapshot = await _firestore
+        .collection('friendRequests')
+        .where('receiverId', isEqualTo: userId)
+        .where('status', isEqualTo: 'pending')
+        .get();
+
+    return querySnapshot.docs
+        .map((doc) => {'id': doc.id, 'data': doc.data()})
+        .toList();
   }
 
+  // Retrieves a user's information by their ID
   Future<UserModel> getUserById(String userId) async {
-    final doc = await _firestore.collection('users').doc(userId).get();
-    return UserModel.fromMap(doc.data()!, doc.id);
+    final docSnapshot = await _firestore.collection('users').doc(userId).get();
+    if (!docSnapshot.exists) {
+      throw Exception('User not found');
+    }
+    return UserModel.fromMap(docSnapshot.data()!, docSnapshot.id);
   }
 
-  Future<void> respondToFriendRequest(String requestId, String response) async {
+  // Responds to a friend request and updates the status
+  Future<void> respondToFriendRequest(
+      String requestId, String response) async {
     final requestDoc = await _firestore.collection('friendRequests').doc(requestId).get();
-    final senderId = requestDoc.data()!['senderId'];
-    final receiverId = requestDoc.data()!['receiverId'];
+    final requestData = requestDoc.data();
+    if (requestData == null) {
+      throw Exception('Friend request not found');
+    }
+
+    final senderId = requestData['senderId'];
+    final receiverId = requestData['receiverId'];
 
     if (response == 'accept') {
-      await addFriend(senderId, receiverId);
-      await addFriend(receiverId, senderId);
-      await _sendNotification(senderId, 'Friend Request Accepted', 'Your friend request has been accepted.');
-    } 
-       await _firestore.collection('friendRequests').doc(requestId).update({'status': response});
+      await _addFriend(senderId, receiverId);
+      await _addFriend(receiverId, senderId);
+      await _sendNotification(
+        senderId,
+        'Friend Request Accepted',
+        'Your friend request has been accepted.',
+      );
+    }
+
+    await _firestore
+        .collection('friendRequests')
+        .doc(requestId)
+        .update({'status': response});
   }
 
-  Future<void> addFriend(String userId, String friendId) async {
-    await _firestore.collection('users').doc(userId).update({
-      'friends': FieldValue.arrayUnion([friendId])
-    });
-    await _firestore.collection('users').doc(friendId).update({
-      'friends': FieldValue.arrayUnion([userId])
+  // Adds a friend by updating both users' friend lists
+  Future<void> _addFriend(String userId, String friendId) async {
+    final userDocRef = _firestore.collection('users').doc(userId);
+    final friendDocRef = _firestore.collection('users').doc(friendId);
+
+    await _firestore.runTransaction((transaction) async {
+      transaction.update(userDocRef, {
+        'friends': FieldValue.arrayUnion([friendId])
+      });
+      transaction.update(friendDocRef, {
+        'friends': FieldValue.arrayUnion([userId])
+      });
     });
   }
 
+  // Removes a friend by updating both users' friend lists
   Future<void> removeFriend(String userId, String friendId) async {
-    await _firestore.collection('users').doc(userId).update({
-      'friends': FieldValue.arrayRemove([friendId])
-    });
-    await _firestore.collection('users').doc(friendId).update({
-      'friends': FieldValue.arrayRemove([userId])
+    final userDocRef = _firestore.collection('users').doc(userId);
+    final friendDocRef = _firestore.collection('users').doc(friendId);
+
+    await _firestore.runTransaction((transaction) async {
+      transaction.update(userDocRef, {
+        'friends': FieldValue.arrayRemove([friendId])
+      });
+      transaction.update(friendDocRef, {
+        'friends': FieldValue.arrayRemove([userId])
+      });
     });
   }
 
+  // Blocks a user by updating the blocked list
   Future<void> blockUser(String userId, String blockedId) async {
     await _firestore.collection('users').doc(userId).update({
       'blocked': FieldValue.arrayUnion([blockedId])
     });
   }
 
+  // Mutes a user by updating the muted list
   Future<void> muteUser(String userId, String mutedId) async {
     await _firestore.collection('users').doc(userId).update({
       'muted': FieldValue.arrayUnion([mutedId])
     });
   }
 
+  // Sends a friend request to another user
   Future<void> sendFriendRequest(String senderId, String receiverId) async {
     await _firestore.collection('friendRequests').add({
       'senderId': senderId,
@@ -70,31 +109,42 @@ class UserProvider with ChangeNotifier {
       'status': 'pending',
       'timestamp': FieldValue.serverTimestamp(),
     });
-    
+
     final receiverUser = await getUserById(receiverId);
-    final receiverToken = receiverUser.token; // Ensure the token is available in UserModel
+    final receiverToken = receiverUser.token; 
 
-    await _notificationUtils.sendNotification(
-      token: receiverToken,
-      title: 'New Friend Request',
-      body: 'You have a new friend request from ${senderId}.',
-    );
+    if (receiverToken != null) {
+      await _notificationUtils.sendNotification(
+        token: receiverToken,
+        title: 'New Friend Request',
+        body: 'You have a new friend request from $senderId.',
+      );
+    }
   }
 
+  // Sends a notification to a user
   Future<void> _sendNotification(String userId, String title, String body) async {
-    final userDoc = await _firestore.collection('users').doc(userId).get();
-    final user = UserModel.fromMap(userDoc.data()!, userId);
-    final token = user.token; // Ensure the token is available in UserModel
+    final user = await getUserById(userId);
+    final token = user.token;
 
-    await _notificationUtils.sendNotification(
-      token: token,
-      title: title,
-      body: body,
-    );
+    if (token != null) {
+      await _notificationUtils.sendNotification(
+        token: token,
+        title: title,
+        body: body,
+      );
+    }
   }
 
+  // Searches for users by username
   Future<List<UserModel>> searchUsers(String username) async {
-    final result = await _firestore.collection('users').where('username', isEqualTo: username).get();
-    return result.docs.map((doc) => UserModel.fromMap(doc.data(), doc.id)).toList();
+    final querySnapshot = await _firestore
+        .collection('users')
+        .where('username', isEqualTo: username)
+        .get();
+
+    return querySnapshot.docs
+        .map((doc) => UserModel.fromMap(doc.data(), doc.id))
+        .toList();
   }
 }

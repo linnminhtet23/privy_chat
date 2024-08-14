@@ -16,14 +16,15 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 }
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-    try {
-    // Initialize Firebase and NotificationService
+  try {
     await Firebase.initializeApp();
     final notificationService = NotificationUtils();
     await notificationService.initialize(); // Initialize NotificationService
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
     bool isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
+
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
     runApp(MyApp(isLoggedIn: isLoggedIn));
   } catch (e) {

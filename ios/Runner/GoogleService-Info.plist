@@ -3,17 +3,17 @@
 <plist version="1.0">
 <dict>
 	<key>API_KEY</key>
-	<string>AIzaSyAUtSDWVXp1CKpT2970tss_5B7kluz2low</string>
+	<string>AIzaSyDOoCMArZvDMMXKZPzKKLjSoDRiTw4bCGs</string>
 	<key>GCM_SENDER_ID</key>
-	<string>218171195114</string>
+	<string>879426475852</string>
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.example.secureFlutterChat</string>
+	<string>com.example.privyChat</string>
 	<key>PROJECT_ID</key>
-	<string>greenmetrics-dev</string>
+	<string>privychat-4bc01</string>
 	<key>STORAGE_BUCKET</key>
-	<string>greenmetrics-dev.appspot.com</string>
+	<string>privychat-4bc01.appspot.com</string>
 	<key>IS_ADS_ENABLED</key>
 	<false></false>
 	<key>IS_ANALYTICS_ENABLED</key>
@@ -25,6 +25,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:218171195114:ios:2a9a1f87e5d41ace38a193</string>
+	<string>1:879426475852:ios:b504fec99543b4560561e9</string>
 </dict>
 </plist>

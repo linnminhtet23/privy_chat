@@ -1,6 +1,6 @@
 {
-    "name": "secure_flutter_chat",
-    "short_name": "secure_flutter_chat",
+    "name": "privy_chat",
+    "short_name": "privy_chat",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

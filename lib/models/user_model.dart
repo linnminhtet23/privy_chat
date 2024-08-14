@@ -5,7 +5,8 @@ class UserModel {
   final String? profileUrl; // Add profile URL (optional)
   String? publicKey;
   String? privateKey;
-  final String token;
+  final String? token;
+  final bool emailVerified; // Add emailVerified field
 
   UserModel({
     required this.uid,
@@ -14,7 +15,8 @@ class UserModel {
     this.profileUrl,
     this.privateKey,
     this.publicKey,
-    required this.token
+    this.token,
+    this.emailVerified = false, // Default value for emailVerified
   });
 
   factory UserModel.fromMap(Map<String, dynamic> data, String uid) {
@@ -22,10 +24,11 @@ class UserModel {
       uid: uid,
       username: data['username'] ?? '',
       email: data['email'] ?? '',
-      profileUrl: data['profileUrl'] ?? '',
+      profileUrl: data['profileUrl'],
       publicKey: data['publicKey'],
       privateKey: data['privateKey'],
       token: data['token'],
+      emailVerified: data['emailVerified'] ?? false, // Default to false if not present
     );
   }
 
@@ -35,7 +38,8 @@ class UserModel {
       'email': email,
       'profileUrl': profileUrl,
       'publicKey': publicKey,
-      'token': token
+      'token': token,
+      'emailVerified': emailVerified, // Add emailVerified to map
     };
   }
 }

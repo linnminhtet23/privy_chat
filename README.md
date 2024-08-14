@@ -1,4 +1,4 @@
-# secure_flutter_chat
+# privy_chat
 
 A new Flutter project.
 

@@ -41,47 +41,46 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyBifS75sFOgqWliNwx7bUIWCJWzA8AlgCQ',
-    appId: '1:218171195114:web:940753b40eef45f338a193',
-    messagingSenderId: '218171195114',
-    projectId: 'greenmetrics-dev',
-    authDomain: 'greenmetrics-dev.firebaseapp.com',
-    storageBucket: 'greenmetrics-dev.appspot.com',
+    apiKey: 'AIzaSyDtWfXgyBcmrSPznbunWHX97mlPD2Ij9PA',
+    appId: '1:879426475852:web:4da3f4d216f7c24b0561e9',
+    messagingSenderId: '879426475852',
+    projectId: 'privychat-4bc01',
+    authDomain: 'privychat-4bc01.firebaseapp.com',
+    storageBucket: 'privychat-4bc01.appspot.com',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyCG4gRi9v8md7Sapvp0YUWiXOSFfQ9OuAY',
-    appId: '1:218171195114:android:6c34d55b3dc1030838a193',
-    messagingSenderId: '218171195114',
-    projectId: 'greenmetrics-dev',
-    storageBucket: 'greenmetrics-dev.appspot.com',
+    apiKey: 'AIzaSyCR2MrzDk9LlJQkuadlw_uBqYTVZ-0FfXI',
+    appId: '1:879426475852:android:e49d67a9eda190bc0561e9',
+    messagingSenderId: '879426475852',
+    projectId: 'privychat-4bc01',
+    storageBucket: 'privychat-4bc01.appspot.com',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyAUtSDWVXp1CKpT2970tss_5B7kluz2low',
-    appId: '1:218171195114:ios:2a9a1f87e5d41ace38a193',
-    messagingSenderId: '218171195114',
-    projectId: 'greenmetrics-dev',
-    storageBucket: 'greenmetrics-dev.appspot.com',
-    iosBundleId: 'com.example.secureFlutterChat',
+    apiKey: 'AIzaSyDOoCMArZvDMMXKZPzKKLjSoDRiTw4bCGs',
+    appId: '1:879426475852:ios:b504fec99543b4560561e9',
+    messagingSenderId: '879426475852',
+    projectId: 'privychat-4bc01',
+    storageBucket: 'privychat-4bc01.appspot.com',
+    iosBundleId: 'com.example.privyChat',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyAUtSDWVXp1CKpT2970tss_5B7kluz2low',
-    appId: '1:218171195114:ios:2a9a1f87e5d41ace38a193',
-    messagingSenderId: '218171195114',
-    projectId: 'greenmetrics-dev',
-    storageBucket: 'greenmetrics-dev.appspot.com',
-    iosBundleId: 'com.example.secureFlutterChat',
+    apiKey: 'AIzaSyDOoCMArZvDMMXKZPzKKLjSoDRiTw4bCGs',
+    appId: '1:879426475852:ios:b504fec99543b4560561e9',
+    messagingSenderId: '879426475852',
+    projectId: 'privychat-4bc01',
+    storageBucket: 'privychat-4bc01.appspot.com',
+    iosBundleId: 'com.example.privyChat',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyBifS75sFOgqWliNwx7bUIWCJWzA8AlgCQ',
-    appId: '1:218171195114:web:e33e8b79cb2489d838a193',
-    messagingSenderId: '218171195114',
-    projectId: 'greenmetrics-dev',
-    authDomain: 'greenmetrics-dev.firebaseapp.com',
-    storageBucket: 'greenmetrics-dev.appspot.com',
+    apiKey: 'AIzaSyDtWfXgyBcmrSPznbunWHX97mlPD2Ij9PA',
+    appId: '1:879426475852:web:ec7036c41284e5ea0561e9',
+    messagingSenderId: '879426475852',
+    projectId: 'privychat-4bc01',
+    authDomain: 'privychat-4bc01.firebaseapp.com',
+    storageBucket: 'privychat-4bc01.appspot.com',
   );
-
 }

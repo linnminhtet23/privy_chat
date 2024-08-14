@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "218171195114",
+    "project_id": "greenmetrics-dev",
+    "storage_bucket": "greenmetrics-dev.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:218171195114:android:ab1e8775b2b2f1f638a193",
+        "android_client_info": {
+          "package_name": "com.example.flutter_chat"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCG4gRi9v8md7Sapvp0YUWiXOSFfQ9OuAY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:218171195114:android:6c34d55b3dc1030838a193",
+        "android_client_info": {
+          "package_name": "com.example.secure_flutter_chat"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCG4gRi9v8md7Sapvp0YUWiXOSFfQ9OuAY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

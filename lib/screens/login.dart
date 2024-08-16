@@ -1,11 +1,9 @@
-// lib/screens/login.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-// import 'package:provider/provider.dart';
-import 'package:secure_flutter_chat/constant/active_constant.dart';
-import 'package:secure_flutter_chat/providers/auth_provider.dart';
-import 'package:secure_flutter_chat/screens/register.dart';
-// import 'package:secure_flutter_chat/providers/auth_provider.dart';
+import 'package:privy_chat/providers/auth_provider.dart';
+import 'package:privy_chat/providers/theme_provider.dart';
+import 'package:privy_chat/screens/register.dart';
+import '../constant/app_theme.dart'; // Import the AppTheme class
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -58,8 +56,14 @@ class _LoginState extends State<Login> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDarkMode = themeProvider.isDarkMode; // Determine if dark mode is enabled
+
+    final theme = isDarkMode ? AppTheme().dark : AppTheme().light; // Use AppTheme based on the mode
+
+    // print({"theme data":theme.buttonTheme});
+
     return Scaffold(
-      backgroundColor: activeColors.primaryDark,
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 30),
@@ -67,11 +71,9 @@ class _LoginState extends State<Login> {
             crossAxisAlignment: CrossAxisAlignment.center,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text(
+              Text(
                 "Sign In",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 35,
+                style: theme.textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -80,11 +82,11 @@ class _LoginState extends State<Login> {
                 key: formKey,
                 child: Column(
                   children: <Widget>[
-                    buildTextField("Email", emailController, false),
+                    buildTextField("Email", emailController, false, theme),
                     const SizedBox(height: 20),
-                    buildTextField("Password", passwordController, true),
+                    buildTextField("Password", passwordController, true, theme),
                     const SizedBox(height: 30),
-                    buildLoginButton(),
+                    buildLoginButton(theme),
                     const SizedBox(height: 20),
                     buildRegisterText(context),
                     const SizedBox(height: 30),
@@ -98,14 +100,13 @@ class _LoginState extends State<Login> {
     );
   }
 
-  Widget buildTextField(
-      String label, TextEditingController controller, bool isPassword) {
+  Widget buildTextField(String label, TextEditingController controller, bool isPassword, ThemeData theme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Text(
           label,
-          style: const TextStyle(color: Colors.white, fontSize: 16),
+          style: theme.textTheme.bodyMedium?.copyWith(fontSize: 16),
         ),
         const SizedBox(height: 10),
         TextFormField(
@@ -119,23 +120,20 @@ class _LoginState extends State<Login> {
           obscureText: isPassword ? !visibility : false,
           decoration: InputDecoration(
             filled: true,
-            fillColor: Colors.white.withOpacity(0.1),
+            fillColor: theme.inputDecorationTheme.fillColor,
             hintText: 'Type your $label',
-            hintStyle: const TextStyle(
-              color: Colors.white70,
-            ),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+            hintStyle: theme.inputDecorationTheme.hintStyle?.copyWith(color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7)),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
             border: OutlineInputBorder(
-              borderSide: const BorderSide(color: Colors.transparent, width: 0),
+              borderSide: BorderSide(color: Colors.transparent, width: 0),
               borderRadius: BorderRadius.circular(10.0),
             ),
             enabledBorder: OutlineInputBorder(
-              borderSide: const BorderSide(color: Colors.transparent, width: 0),
+              borderSide: BorderSide(color: Colors.transparent, width: 0),
               borderRadius: BorderRadius.circular(10.0),
             ),
             focusedBorder: OutlineInputBorder(
-              borderSide: const BorderSide(color: Colors.deepPurple, width: 1),
+              borderSide: BorderSide(color: theme.primaryColor, width: 1),
               borderRadius: BorderRadius.circular(10.0),
             ),
             suffixIcon: isPassword
@@ -143,7 +141,7 @@ class _LoginState extends State<Login> {
                     onPressed: visiblePassword,
                     icon: Icon(
                       visibility ? Icons.visibility_off : Icons.visibility,
-                      color: Colors.white70,
+                      color: theme.iconTheme.color,
                     ),
                   )
                 : null,
@@ -153,41 +151,43 @@ class _LoginState extends State<Login> {
     );
   }
 
-  Widget buildLoginButton() {
-    return Container(
+  Widget buildLoginButton(ThemeData theme) {
+    return
+     Container(
       decoration: BoxDecoration(
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            spreadRadius: 2,
-            blurRadius: 5,
-            offset: const Offset(0, 3),
-          ),
-        ],
-        gradient: LinearGradient(
-          colors: [activeColors.primaryDark, activeColors.secondaryDark],
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-        ),
+        // boxShadow: [
+        //   BoxShadow(
+        //     color: theme.iconTheme.color!.withOpacity(0.2),
+        //     spreadRadius: 2,
+        //     blurRadius: 5,
+        //     offset: const Offset(0, 3),
+        //   ),
+        // ],
+        // gradient: LinearGradient(
+        //   colors: [theme.primaryColor, theme.colorScheme.secondary],
+        //   begin: Alignment.centerLeft,
+        //   end: Alignment.centerRight,
+        // ),
+        color: Theme.of(context).primaryColor,
         borderRadius: BorderRadius.circular(10),
       ),
       child: TextButton(
-        style: TextButton.styleFrom(
-          padding: const EdgeInsets.symmetric(horizontal: 80, vertical: 15),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 80, vertical: 15),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
         ),
-        onPressed: submit,
-        child: Text(
-          actionLoading ? 'Loading..' : 'Login',
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
+        foregroundColor: Colors.white, // Set button text color
+        backgroundColor: theme.primaryColor, // Remove default background color
+      ),
+      onPressed: submit,
+      child: Text(
+        actionLoading ? 'Loading..' : 'Login',
+        style: theme.textTheme.labelLarge?.copyWith(
+          fontWeight: FontWeight.bold,
         ),
       ),
+    ),
     );
   }
 

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:secure_flutter_chat/constant/active_constant.dart';
-import 'package:secure_flutter_chat/providers/auth_provider.dart';
+import 'package:privy_chat/constant/active_constant.dart';
+import 'package:privy_chat/providers/auth_provider.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});

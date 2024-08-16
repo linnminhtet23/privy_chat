@@ -1,4 +1,4 @@
 
- import 'package:secure_flutter_chat/constant/color.dart';
+ import 'package:privy_chat/constant/color.dart';
 
 KColors activeColors = colorScheme1;

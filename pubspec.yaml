@@ -1,4 +1,4 @@
-name: secure_flutter_chat
+name: privy_chat
 description: "A new Flutter project."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -40,18 +40,25 @@ dependencies:
   firebase_auth: ^5.1.2
   cloud_firestore: ^5.1.0
   shared_preferences: ^2.2.3
-  encrypt: ^5.0.3
   pointycastle: ^3.9.1
-  hex: ^0.2.0
-  asn1lib: ^1.5.3
   firebase_messaging: ^15.0.3
   firebase_admin: ^0.2.0
   http: ^0.13.6
-  google_sign_in: ^6.2.1
   fluttertoast: ^8.2.7
+  google_fonts: ^4.0.4
+  cached_network_image: ^3.3.1
+  faker: ^2.1.0
+  jiffy: ^6.2.1
 dev_dependencies:
+  flutter_launcher_icons: ^0.13.1
   flutter_test:
     sdk: flutter
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path_android: "assets/privy_chat.png"
+  image_path_ios: "assets/privy_chat.png"
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -73,7 +80,7 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   # assets:
-  #   - images/a_dot_burr.jpeg
+  #   - assets/image/
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see

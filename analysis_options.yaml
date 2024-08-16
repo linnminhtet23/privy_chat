@@ -9,6 +9,12 @@
 # packages, and plugins designed to encourage good coding practices.
 include: package:flutter_lints/flutter.yaml
 
+# If the package is not found, try updating your dependencies:
+# Run 'flutter pub get' in the project directory
+
+# If the issue persists, you may need to add flutter_lints to your pubspec.yaml:
+# dev_dependencies:
+#   flutter_lints: ^2.0.0  # Use the latest version available
 linter:
   # The lint rules applied to this project can be customized in the
   # section below to disable rules from the `package:flutter_lints/flutter.yaml`

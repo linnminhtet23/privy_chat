@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:secure_flutter_chat/utils/encryption_utils.dart';
+import 'package:privy_chat/utils/encryption_utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import '../models/user_model.dart';
-import 'package:secure_flutter_chat/screens/home.dart';
-import 'package:secure_flutter_chat/screens/login.dart';
+import 'package:privy_chat/screens/home.dart';
+import 'package:privy_chat/screens/login.dart';
 
 class AuthProvider with ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -75,7 +75,7 @@ class AuthProvider with ChangeNotifier {
               );
             }
             navigatorKey.currentState!.pushReplacement(
-              MaterialPageRoute(builder: (_) => const HomeScreen()),
+              MaterialPageRoute(builder: (_) =>  HomeScreen()),
             );
           }
         } else {

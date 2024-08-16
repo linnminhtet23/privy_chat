@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:secure_flutter_chat/models/user_model.dart';
-import 'package:secure_flutter_chat/utils/notification_utils.dart';
+import 'package:privy_chat/models/user_model.dart';
+import 'package:privy_chat/utils/notification_utils.dart';
 
 class UserProvider with ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;

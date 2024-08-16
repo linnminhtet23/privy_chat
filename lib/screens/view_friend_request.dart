@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:secure_flutter_chat/models/user_model.dart';
-import 'package:secure_flutter_chat/providers/auth_provider.dart';
-import 'package:secure_flutter_chat/providers/user_provider.dart';
+import 'package:privy_chat/models/user_model.dart';
+import 'package:privy_chat/providers/auth_provider.dart';
+import 'package:privy_chat/providers/user_provider.dart';
 
 class ViewFriendRequest extends StatefulWidget {
   const ViewFriendRequest({super.key});

@@ -39,5 +39,5 @@ jobs:
         with:
             appId: ${{secrets.PRIVY_CHAT_ID}}
             token: ${{secrets.TOKEN}}
-            groups: pre-tester
+            groups: testing_group
             file: build/app/outputs/apk/release/app-release.apk

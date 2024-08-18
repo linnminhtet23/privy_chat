@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:privy_chat/screens/login.dart';
 import 'package:provider/provider.dart';
 import 'package:privy_chat/constant/app_theme.dart';
 import 'package:privy_chat/providers/auth_provider.dart';
@@ -56,8 +57,8 @@ class MyApp extends StatelessWidget {
             theme: appTheme.light, // Use instance member
             darkTheme: appTheme.dark, // Use instance member
             themeMode: themeProvider.themeMode, // This line uses the ThemeProvider
-            // home: isLoggedIn ?  HomeScreen() : const Login(),
-            home: HomeScreen(),
+            home: isLoggedIn ?  HomeScreen() : const Login(),
+            // home: HomeScreen(),
             debugShowCheckedModeBanner: false,
           );
         },

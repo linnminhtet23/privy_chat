@@ -335,41 +335,48 @@ class _ActionBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textFieldHeight = 100.0; // Define a height for the TextFormField
+
     return SafeArea(
       bottom: true,
       top: false,
-      child: Row(
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              border: Border(
-                right: BorderSide(
-                  width: 2,
-                  color: Theme.of(context).dividerColor,
+      child: Container(
+        height: textFieldHeight, // Set the height of the action bar
+        child: Row(
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                border: Border(
+                  right: BorderSide(
+                    width: 2,
+                    color: Theme.of(context).dividerColor,
+                  ),
+                ),
+              ),
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16.0),
+                child: Icon(
+                  CupertinoIcons.camera_fill,
                 ),
               ),
             ),
-            child: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.0),
-              child: Icon(
-                CupertinoIcons.camera_fill,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.only(left: 16.0),
-              child: TextFormField(
-                style: TextStyle(fontSize: 14),
-                decoration: InputDecoration(
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(left: 16.0),
+                child: TextFormField(
+                  style: TextStyle(fontSize: 14),
+                  decoration: InputDecoration(
                     filled: true,
-                    fillColor: Theme.of(context).inputDecorationTheme.fillColor,
+                    fillColor: Theme.of(context)
+                        .inputDecorationTheme
+                        .fillColor,
                     hintText: 'Type your message',
-                    hintStyle: Theme.of(context).inputDecorationTheme.hintStyle,
-                    // border: InputBorder.none,
+                    hintStyle: Theme.of(context)
+                        .inputDecorationTheme
+                        .hintStyle,
                     border: OutlineInputBorder(
-                      borderSide:
-                          BorderSide(color: Colors.transparent, width: 0),
+                      borderSide: BorderSide(
+                          color: Colors.transparent, width: 0),
                       borderRadius: BorderRadius.circular(10.0),
                     ),
                     suffixIcon: IconButton(
@@ -380,31 +387,27 @@ class _ActionBar extends StatelessWidget {
                         Icons.emoji_emotions_outlined,
                         color: Theme.of(context).iconTheme.color,
                       ),
-                    )),
+                    ),
+                  ),
+                ),
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(
-              left: 12,
-              right: 24.0,
+            Padding(
+              padding: const EdgeInsets.only(
+                left: 12,
+                right: 24.0,
+              ),
+              child: IconButton(
+                icon: Icon(Icons.send_rounded),
+                onPressed: () {
+                  print('TODO: send a message');
+                },
+              ),
             ),
-            child: IconButton(
-              icon: Icon(Icons.send_rounded),
-              onPressed: () {
-                print('TODO: send a message');
-              },
-            )
-            // GlowingActionButton(
-            //   color: AppColors.secondary,
-            //   icon: Icons.send_rounded,
-            //   onPressed: () {
-            //     print('TODO: send a message');
-            //   },
-            // ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
+

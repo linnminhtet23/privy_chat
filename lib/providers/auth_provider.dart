@@ -21,91 +21,79 @@ class AuthProvider with ChangeNotifier {
   }
 
   Future<void> _onAuthStateChanged(User? user) async {
+  try {
     if (user == null) {
       _userModel = null;
-      navigatorKey.currentState!.pushReplacement(
+      navigatorKey.currentState?.pushReplacement(
         MaterialPageRoute(builder: (_) => const Login()),
       );
     } else {
-      try {
-        final userDoc = await _firestore.collection('users').doc(user.uid).get();
-        if (userDoc.exists) {
-          _userModel = UserModel.fromMap(userDoc.data() as Map<String, dynamic>, user.uid);
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
 
-          SharedPreferences prefs = await SharedPreferences.getInstance();
-          await prefs.setBool('isLoggedIn', true);
+      if (!userDoc.exists) {
+        await signOut();
+        return;
+      }
 
-          // Generate key pair if not exists
-          if (_userModel!.privateKey == null || _userModel!.publicKey == null) {
-            final keyPair = await EncryptionUtils.generateKeyPair();
-            final publicKeyPem = EncryptionUtils.encodePublicKeyToPem(keyPair.publicKey);
-            final privateKeyPem = EncryptionUtils.encodePrivateKeyToPem(keyPair.privateKey);
+      _userModel = UserModel.fromMap(userDoc.data() as Map<String, dynamic>, user.uid);
 
-            await _firestore.collection('users').doc(user.uid).update({
-              'publicKey': publicKeyPem,
-              'privateKey': privateKeyPem,
-            });
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isLoggedIn', true);
 
-            _userModel!.publicKey = publicKeyPem;
-            _userModel!.privateKey = privateKeyPem;
-          }
+      // Generate key pair if not exists
+      if (_userModel!.privateKey == null || _userModel!.publicKey == null) {
+        final keyPair = await EncryptionUtils.generateKeyPair();
+        final publicKeyPem = EncryptionUtils.encodePublicKeyToPem(keyPair.publicKey);
+        final privateKeyPem = EncryptionUtils.encodePrivateKeyToPem(keyPair.privateKey);
 
-          // Check if email is verified
-          if (!user.emailVerified) {
-            await user.sendEmailVerification();
-            Fluttertoast.showToast(
-              msg: "Verification email sent. Please check your inbox.",
-              toastLength: Toast.LENGTH_LONG,
-              gravity: ToastGravity.BOTTOM,
-            );
-            navigatorKey.currentState!.pushReplacement(
-              MaterialPageRoute(builder: (_) => const Login()),
-            );
-          } else {
-            // Update database when email verification is successful
-            if (!userDoc.data()!['emailVerified']) {
-              await _firestore.collection('users').doc(user.uid).update({
-                'emailVerified': true,
-                'verifiedAt': FieldValue.serverTimestamp(),
-              });
-              Fluttertoast.showToast(
-                msg: "Email verified successfully.",
-                toastLength: Toast.LENGTH_LONG,
-                gravity: ToastGravity.BOTTOM,
-              );
-            }
-            navigatorKey.currentState!.pushReplacement(
-              MaterialPageRoute(builder: (_) =>  HomeScreen()),
-            );
-          }
-        } else {
-          // Handle case where user doc doesn't exist (optional)
-          await signOut();
-        }
-      } on FirebaseAuthException catch (e) {
-        if (e.code == 'too-many-requests') {
-          Fluttertoast.showToast(
-            msg: "Too many requests. Please try again later.",
-            toastLength: Toast.LENGTH_LONG,
-            gravity: ToastGravity.BOTTOM,
-          );
-        } else {
-          Fluttertoast.showToast(
-            msg: 'Authentication error: ${e.message}',
-            toastLength: Toast.LENGTH_LONG,
-            gravity: ToastGravity.BOTTOM,
-          );
-        }
-      } catch (e) {
+        await _firestore.collection('users').doc(user.uid).update({
+          'publicKey': publicKeyPem,
+          'privateKey': privateKeyPem,
+        });
+
+        _userModel!.publicKey = publicKeyPem;
+        _userModel!.privateKey = privateKeyPem;
+      }
+
+      if (!user.emailVerified) {
+        await user.sendEmailVerification();
         Fluttertoast.showToast(
-          msg: 'An unexpected error occurred: $e',
+          msg: "Verification email sent. Please check your inbox.",
           toastLength: Toast.LENGTH_LONG,
           gravity: ToastGravity.BOTTOM,
         );
+        navigatorKey.currentState?.pushReplacement(
+          MaterialPageRoute(builder: (_) => const Login()),
+        );
+      } else {
+        // Update database when email verification is successful
+        if (!(userDoc.data()?['emailVerified'] ?? false)) {
+          await _firestore.collection('users').doc(user.uid).update({
+            'emailVerified': true,
+            'verifiedAt': FieldValue.serverTimestamp(),
+          });
+          Fluttertoast.showToast(
+            msg: "Email verified successfully.",
+            toastLength: Toast.LENGTH_LONG,
+            gravity: ToastGravity.BOTTOM,
+          );
+        }
+
+        navigatorKey.currentState?.pushReplacement(
+          MaterialPageRoute(builder: (_) => HomeScreen()),
+        );
       }
     }
+  } catch (e) {
+    Fluttertoast.showToast(
+      msg: 'An unexpected error occurred: $e',
+      toastLength: Toast.LENGTH_LONG,
+      gravity: ToastGravity.BOTTOM,
+    );
+  } finally {
     notifyListeners();
   }
+}
 
   Future<void> signIn(String email, String password) async {
     try {

@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - master
-      - develop 
 
 jobs:
   build:
@@ -35,77 +34,45 @@ jobs:
       
       - run: flutter pub get
       
-      # Separate Android Build
-      - name: Build Android APK
-        run: |
-          if [ "${{ github.ref }}" == "refs/heads/master" ]; then
-            flutter build apk --flavor production
-          else
-            flutter build apk --flavor development
-          fi
-          
-      - name: Upload APK to Firebase App Distribution
-        if: github.ref == 'refs/heads/master' # Only for production branch
-        uses: wzieba/Firebase-Distribution-Github-Action@v1
+      # Build Android APK
+      - run: flutter build apk
+      - uses: actions/upload-artifact@v1
         with:
-            appId: ${{ secrets.PRIVY_CHAT_ID_ANDROID }}
-            token: ${{ secrets.TOKEN }}
-            groups: production_group
-            file: build/app/outputs/apk/release/app-release.apk
-
-      - name: Upload APK to Firebase App Distribution (Dev)
-        if: github.ref == 'refs/heads/develop' # Only for development branch
-        uses: wzieba/Firebase-Distribution-Github-Action@v1
-        with:
-            appId: ${{ secrets.PRIVY_CHAT_ID_ANDROID_DEV }}
-            token: ${{ secrets.TOKEN }}
-            groups: development_group
-            file: build/app/outputs/apk/release/app-release.apk
-
-      # Separate iOS Build (Commented Out)
+          name: release-apk
+          path: build/app/outputs/apk/release/app-release.apk
+      
+      # Build iOS App
       # - name: Install CocoaPods
       #   run: sudo gem install cocoapods
 
       # - name: Build iOS app
       #   run: |
-      #     if [ "${{ github.ref }}" == "refs/heads/master" ]; then
-      #       flutter build ios --release --no-codesign
-      #       xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -sdk iphoneos -configuration AppStoreDistribution archive -archivePath ${{ runner.temp }}/Runner.xcarchive
-      #       xcodebuild -exportArchive -archivePath ${{ runner.temp }}/Runner.xcarchive -exportOptionsPlist ios/ExportOptions.plist -exportPath ${{ runner.temp }}/
-      #     else
-      #       flutter build ios --debug --no-codesign
-      #       xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -sdk iphoneos -configuration Debug archive -archivePath ${{ runner.temp }}/Runner.xcarchive
-      #       xcodebuild -exportArchive -archivePath ${{ runner.temp }}/Runner.xcarchive -exportOptionsPlist ios/ExportOptions.plist -exportPath ${{ runner.temp }}/
-      #     fi
+      #     flutter build ios --release --no-codesign
+      #     # Archive the build
+      #     xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -sdk iphoneos -configuration AppStoreDistribution archive -archivePath ${{ runner.temp }}/Runner.xcarchive
+      #     # Export the IPA
+      #     xcodebuild -exportArchive -archivePath ${{ runner.temp }}/Runner.xcarchive -exportOptionsPlist ios/ExportOptions.plist -exportPath ${{ runner.temp }}/
 
       # - name: Upload iOS build artifact
-      #   if: github.ref == 'refs/heads/master'
       #   uses: actions/upload-artifact@v1
       #   with:
       #     name: release-ios
       #     path: ${{ runner.temp }}/Runner.ipa
 
-      # - name: Upload iOS build artifact (Dev)
-      #   if: github.ref == 'refs/heads/develop'
-      #   uses: actions/upload-artifact@v1
-      #   with:
-      #     name: release-ios-dev
-      #     path: ${{ runner.temp }}/Runner.ipa
+      # Upload APK to Firebase App Distribution
+      - name: Upload APK to Firebase App Distribution
+        uses: wzieba/Firebase-Distribution-Github-Action@v1
+        with:
+            appId: ${{ secrets.PRIVY_CHAT_ID_ANDROID }}
+            token: ${{ secrets.TOKEN }}
+            groups: testing_group
+            file: build/app/outputs/apk/release/app-release.apk
 
+      # Upload iOS IPA to Firebase App Distribution
       # - name: Upload IPA to Firebase App Distribution
-      #   if: github.ref == 'refs/heads/master'
       #   uses: wzieba/Firebase-Distribution-Github-Action@v1
       #   with:
       #       appId: ${{ secrets.PRIVY_CHAT_ID_IOS }}
       #       token: ${{ secrets.TOKEN }}
-      #       groups: production_group
-      #       file: ${{ runner.temp }}/Runner.ipa
-
-      # - name: Upload IPA to Firebase App Distribution (Dev)
-      #   if: github.ref == 'refs/heads/develop'
-      #   uses: wzieba/Firebase-Distribution-Github-Action@v1
-      #   with:
-      #       appId: ${{ secrets.PRIVY_CHAT_ID_IOS_DEV }}
-      #       token: ${{ secrets.TOKEN }}
-      #       groups: development_group
+      #       groups: testing_group
       #       file: ${{ runner.temp }}/Runner.ipa

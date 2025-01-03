@@ -1,45 +1,94 @@
+import 'package:privy_chat/constants.dart';
+
 class UserModel {
-  final String uid;
-  final String username;
-  final String email;
-  final String? profileUrl; // Add profile URL (optional)
+  String uid;
+  String name;
+  String email;
+  String password;
+  String image;
+  String token;
+  String aboutMe;
+  String lastSeen;
+  String createdAt;
+  bool isOnline;
   String? publicKey;
   String? privateKey;
-  final String? token;
-  final bool emailVerified; // Add emailVerified field
+  List<String> friendsUIDs;
+  List<String> friendRequestsUIDs;
+  List<String> sentFriendRequestsUIDs;
 
   UserModel({
     required this.uid,
-    required this.username,
+    required this.name,
     required this.email,
-    this.profileUrl,
+    required this.password,
+    required this.image,
+    required this.token,
+    required this.aboutMe,
+    required this.lastSeen,
+    required this.createdAt,
+    required this.isOnline,
     this.privateKey,
     this.publicKey,
-    this.token,
-    this.emailVerified = false, // Default value for emailVerified
+    required this.friendsUIDs,
+    required this.friendRequestsUIDs,
+    required this.sentFriendRequestsUIDs,
   });
 
-  factory UserModel.fromMap(Map<String, dynamic> data, String uid) {
+  // from map
+  factory UserModel.fromMap(Map<String, dynamic> map) {
     return UserModel(
-      uid: uid,
-      username: data['username'] ?? '',
-      email: data['email'] ?? '',
-      profileUrl: data['profileUrl'],
-      publicKey: data['publicKey'],
-      privateKey: data['privateKey'],
-      token: data['token'],
-      emailVerified: data['emailVerified'] ?? false, // Default to false if not present
+      uid: map[Constants.uid] ?? '',
+      name: map[Constants.name] ?? '',
+      email: map[Constants.email] ?? '',
+      password: map[Constants.password] ?? '',
+      image: map[Constants.image] ?? '',
+      token: map[Constants.token] ?? '',
+      aboutMe: map[Constants.aboutMe] ?? '',
+      lastSeen: map[Constants.lastSeen] ?? '',
+      createdAt: map[Constants.createdAt] ?? '',
+      isOnline: map[Constants.isOnline] ?? false,
+      publicKey: map[Constants.publicKey] ?? null,
+      privateKey: map[Constants.privateKey] ?? null,
+
+      friendsUIDs: List<String>.from(map[Constants.friendsUIDs] ?? []),
+      friendRequestsUIDs:
+      List<String>.from(map[Constants.friendRequestsUIDs] ?? []),
+      sentFriendRequestsUIDs:
+      List<String>.from(map[Constants.sentFriendRequestsUIDs] ?? []),
     );
   }
 
+  // to map
   Map<String, dynamic> toMap() {
     return {
-      'username': username,
-      'email': email,
-      'profileUrl': profileUrl,
-      'publicKey': publicKey,
-      'token': token,
-      'emailVerified': emailVerified, // Add emailVerified to map
+      Constants.uid: uid,
+      Constants.name: name,
+      Constants.email: email,
+      // Constants.password: password,
+      Constants.image: image,
+      Constants.token: token,
+      Constants.aboutMe: aboutMe,
+      Constants.lastSeen: lastSeen,
+      Constants.createdAt: createdAt,
+      Constants.isOnline: isOnline,
+      Constants.publicKey: publicKey,
+      Constants.privateKey: privateKey,
+      Constants.friendsUIDs: friendsUIDs,
+      Constants.friendRequestsUIDs: friendRequestsUIDs,
+      Constants.sentFriendRequestsUIDs: sentFriendRequestsUIDs,
     };
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+
+    return other is UserModel && other.uid == uid;
+  }
+
+  @override
+  int get hashCode {
+    return uid.hashCode;
   }
 }

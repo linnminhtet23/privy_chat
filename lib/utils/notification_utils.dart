@@ -2,41 +2,85 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class NotificationUtils {
-  // final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
-  final String serverKey = "BJbfkA0cjhHVgHg_IcgE7mTiT06vrGA6wqpl4wWmf4fmjeeUCmC5fP1m5l_iO8OFK2ZuFqsMgaLSPoKDZV3KKnw"; // Replace with your server key
+  static const String _serverKey = "BCHgcQJYPeP7td0-mom9rq3DuJVPZRM2Vj96VVBm605qCWEZ6TTOI10xBYhIaosIjjOhR71pv5Z7zt5KtuLFhtg"; // Replace with your actual server key
+  static const String _tokenKey = "device_token";
 
   Future<void> initialize() async {
     await Firebase.initializeApp();
-    
+
+    // Request notification permissions
+    await _requestPermission();
+
+    // Retrieve and store the device token
+    final token = await FirebaseMessaging.instance.getToken();
+    if (token != null) {
+      await _storeDeviceToken(token);
+    }
+
+    // Set up message handlers
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       _handleMessage(message);
     });
 
-    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-    
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       _handleMessage(message);
     });
+
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  }
+
+  Future<void> _requestPermission() async {
+    FirebaseMessaging messaging = FirebaseMessaging.instance;
+
+    NotificationSettings settings = await messaging.requestPermission(
+      alert: true,
+      announcement: false,
+      badge: true,
+      carPlay: false,
+      criticalAlert: false,
+      provisional: false,
+      sound: true,
+    );
+
+    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+      print('User granted permission');
+    } else if (settings.authorizationStatus == AuthorizationStatus.provisional) {
+      print('User granted provisional permission');
+    } else {
+      print('User declined or has not accepted permission');
+    }
+  }
+
+  Future<void> _storeDeviceToken(String token) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_tokenKey, token);
+  }
+
+  Future<String?> getDeviceToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_tokenKey);
   }
 
   void _handleMessage(RemoteMessage message) {
     print("Message received: ${message.notification?.title}");
+    // Handle the received message (e.g., display notification, update data)
   }
 
   Future<void> sendNotification({
-    required String token,
+    required String token, // The recipient's device token
     required String title,
     required String body,
   }) async {
     final url = 'https://fcm.googleapis.com/fcm/send';
     final headers = {
       'Content-Type': 'application/json',
-      'Authorization': 'key=$serverKey',
+      'Authorization': 'key=$_serverKey',
     };
     final payload = jsonEncode({
-      'to': token,
+      'to': token, // Send the notification to the provided token
       'notification': {
         'title': title,
         'body': body,
@@ -53,7 +97,7 @@ class NotificationUtils {
         headers: headers,
         body: payload,
       );
-      
+
       if (response.statusCode == 200) {
         print('Notification sent successfully');
       } else {

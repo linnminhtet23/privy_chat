@@ -47,6 +47,7 @@ class DefaultFirebaseOptions {
     projectId: 'privychat-4bc01',
     authDomain: 'privychat-4bc01.firebaseapp.com',
     storageBucket: 'privychat-4bc01.appspot.com',
+    measurementId: 'G-8WF2FBMMF9',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
@@ -82,5 +83,7 @@ class DefaultFirebaseOptions {
     projectId: 'privychat-4bc01',
     authDomain: 'privychat-4bc01.firebaseapp.com',
     storageBucket: 'privychat-4bc01.appspot.com',
+    measurementId: 'G-ZRPR8T45JB',
   );
+
 }

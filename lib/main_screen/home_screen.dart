@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:developer';
 import 'dart:io';
 
@@ -16,6 +17,8 @@ import 'package:privy_chat/push_notification/navigation_controller.dart';
 import 'package:privy_chat/push_notification/notification_services.dart';
 import 'package:privy_chat/utilities/global_methods.dart';
 import 'package:provider/provider.dart';
+import 'package:privy_chat/providers/chat_provider.dart';
+
 
 import '../providers/authentication_provider.dart';
 
@@ -32,6 +35,10 @@ class _HomeScreenState extends State<HomeScreen>
   final PageController pageController = PageController(initialPage: 0);
   int currentIndex = 0;
   bool _appBadgeSupported = false;
+  // Example badge counts
+  int chatBadgeCount = 3;
+  int groupBadgeCount = 3;
+  int peopleBadgeCount = 0;
 
   final List<Widget> pages = const [
     MyChatsScreen(),
@@ -39,13 +46,20 @@ class _HomeScreenState extends State<HomeScreen>
     PeopleScreen(),
   ];
 
+  StreamSubscription<int>? _chatBadgeSubscription;
+  StreamSubscription<int>? _groupBadgeSubscription;
+
   @override
   void initState() {
     WidgetsBinding.instance!.addObserver(this);
-    // initPlatformState();
-    // requestNotificationPermissions();
-    // NotificationServices.createNotificationChannelAndInitialize();
-    // initCloudMessaging();
+    initPlatformState();
+    requestNotificationPermissions();
+    NotificationServices.createNotificationChannelAndInitialize();
+    initCloudMessaging();
+
+
+    final authProvider = context.read<AuthenticationProvider>();
+    final userId = authProvider.userModel?.uid;
     super.initState();
   }
 
@@ -256,17 +270,40 @@ class _HomeScreenState extends State<HomeScreen>
               )
             : null,
         bottomNavigationBar: BottomNavigationBar(
-          items: const [
+          // items: const [
+          //   BottomNavigationBarItem(
+          //     icon: Icon(CupertinoIcons.chat_bubble_2),
+          //     label: 'Chats',
+          //   ),
+          //   BottomNavigationBarItem(
+          //     icon: Icon(CupertinoIcons.group),
+          //     label: 'Groups',
+          //   ),
+          //   BottomNavigationBarItem(
+          //     icon: Icon(CupertinoIcons.globe),
+          //     label: 'People',
+          //   ),
+          // ],
+          items: [
             BottomNavigationBarItem(
-              icon: Icon(CupertinoIcons.chat_bubble_2),
+              icon: _buildBadge(
+                icon: CupertinoIcons.chat_bubble_2,
+                badgeCount: chatBadgeCount,
+              ),
               label: 'Chats',
             ),
             BottomNavigationBarItem(
-              icon: Icon(CupertinoIcons.group),
+              icon: _buildBadge(
+                icon: CupertinoIcons.group,
+                badgeCount: groupBadgeCount,
+              ),
               label: 'Groups',
             ),
             BottomNavigationBarItem(
-              icon: Icon(CupertinoIcons.globe),
+              icon: _buildBadge(
+                icon: CupertinoIcons.globe,
+                badgeCount: peopleBadgeCount,
+              ),
               label: 'People',
             ),
           ],
@@ -281,5 +318,39 @@ class _HomeScreenState extends State<HomeScreen>
             });
           },
         ));
+  }
+  Widget _buildBadge({required IconData icon, required int badgeCount}) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Icon(icon, size: 24),
+        if (badgeCount > 0)
+          Positioned(
+            right: -2,
+            top: -2,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: Colors.deepPurple,
+                shape: BoxShape.circle,
+              ),
+              constraints: const BoxConstraints(
+                minWidth: 18,
+                minHeight: 18,
+              ),
+              child: Center(
+                child: Text(
+                  badgeCount.toString(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
   }
 }

@@ -54,7 +54,7 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Lottie.asset(AssetsMenager.chatBubble),
             ),
             Text(
-              'Flutter Chat Pro',
+              'Privy Chat',
               style: GoogleFonts.poppins(
                 fontSize: 28,
                 fontWeight: FontWeight.w500,

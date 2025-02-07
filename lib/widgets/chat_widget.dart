@@ -2,7 +2,7 @@ import 'package:date_format/date_format.dart';
 import 'package:flutter/material.dart';
 import 'package:privy_chat/models/group_model.dart';
 import 'package:privy_chat/models/last_message_model.dart';
-import 'package:privy_chat/providers/authentication_provider_unused.dart';
+// import 'package:privy_chat/providers/authentication_provider_unused.dart';
 import 'package:privy_chat/utilities/global_methods.dart';
 import 'package:privy_chat/widgets/unread_message_counter.dart';
 import 'package:provider/provider.dart';

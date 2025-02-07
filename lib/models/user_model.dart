@@ -48,9 +48,8 @@ class UserModel {
       lastSeen: map[Constants.lastSeen] ?? '',
       createdAt: map[Constants.createdAt] ?? '',
       isOnline: map[Constants.isOnline] ?? false,
-      publicKey: map[Constants.publicKey] ?? null,
-      privateKey: map[Constants.privateKey] ?? null,
-
+      publicKey: map[Constants.publicKey] ??null ,
+      privateKey: map[Constants.privateKey]??null,
       friendsUIDs: List<String>.from(map[Constants.friendsUIDs] ?? []),
       friendRequestsUIDs:
       List<String>.from(map[Constants.friendRequestsUIDs] ?? []),

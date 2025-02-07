@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:date_format/date_format.dart';
 import 'package:flutter/material.dart';
 import 'package:privy_chat/enums/enums.dart';
 import 'package:privy_chat/models/user_model.dart';
@@ -72,8 +71,8 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     // get the list of group admins
-    List<UserModel> groupAdminsList =
-        context.read<GroupProvider>().groupAdminsList;
+    // List<UserModel> groupAdminsList =
+    //     context.read<GroupProvider>().groupAdminsList;
 
     final uid = context.read<AuthenticationProvider>().userModel!.uid;
 

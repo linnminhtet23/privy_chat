@@ -1,9 +1,6 @@
-import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:privy_chat/constants.dart';
 import 'package:privy_chat/enums/enums.dart';
-import 'package:privy_chat/utils/encryption_utils.dart';
 
 class LastMessageModel {
   String senderUID;
@@ -11,10 +8,19 @@ class LastMessageModel {
   String contactName;
   String contactImage;
   String message;
+    Map<String, dynamic>? tempMessage; 
+  String? tempFileMessage;
+  String? messageForSender;
+  String? messageForReceiver;
   MessageEnum messageType;
   DateTime timeSent;
   bool isSeen;
-  Map<String, dynamic>? additionalData; // New field for extra metadata
+  Map<String, dynamic>? aesKeyEncrypted;
+  String? typingUserId;
+  String? isTyping;
+  // final String? aesKeyEncryptedForSender;
+  // final String? aesKeyEncryptedForReceiver;
+  // Map<String, dynamic>? additionalData; // New field for extra metadata
 
 
   LastMessageModel({
@@ -23,10 +29,19 @@ class LastMessageModel {
     required this.contactName,
     required this.contactImage,
     required this.message,
+        this.tempMessage,
+        this.tempFileMessage,
+    this.messageForSender,
+    this.messageForReceiver,
     required this.messageType,
     required this.timeSent,
     required this.isSeen,
-    this.additionalData,
+    // this.additionalData,
+    this.aesKeyEncrypted,
+    this.typingUserId,
+    this.isTyping
+    // this.aesKeyEncryptedForSender,
+    // this.aesKeyEncryptedForReceiver,
 
   });
 
@@ -38,10 +53,20 @@ class LastMessageModel {
       Constants.contactName: contactName,
       Constants.contactImage: contactImage,
       Constants.message: message,
+      Constants.tempFileMessage: tempFileMessage,
+      Constants.tempMessage: tempMessage,
+      Constants.messageForSender: messageForSender,
+      Constants.messageForReceiver: messageForReceiver,
       Constants.messageType: messageType.name,
       Constants.timeSent: timeSent.microsecondsSinceEpoch,
       Constants.isSeen: isSeen,
-      Constants.additionalData: additionalData, // Include additionalData
+      Constants.aesKeyEncrypted: aesKeyEncrypted,
+      Constants.typingUserId: typingUserId,
+      Constants.isTyping: isTyping,
+
+      // Constants.aesKeyEncryptedForSender: aesKeyEncryptedForSender,
+      // Constants.aesKeyEncryptedForReceiver: aesKeyEncryptedForReceiver
+      // Constants.additionalData: additionalData, // Include additionalData
 
     };
   }
@@ -54,11 +79,20 @@ class LastMessageModel {
       contactUID: map[Constants.contactUID] ?? '',
       contactName: map[Constants.contactName] ?? '',
       contactImage: map[Constants.contactImage] ?? '',
-      message: map[Constants.message] ?? '', // Decrypted message
+      message: map[Constants.message] ?? '',
+      tempMessage: map[Constants.tempMessage] ?? {},
+      tempFileMessage: map[Constants.tempFileMessage] ?? '',
+      messageForSender: map[Constants.messageForSender] ?? '',
+      messageForReceiver: map[Constants.messageForReceiver] ?? '',
       messageType: map[Constants.messageType].toString().toMessageEnum(),
       timeSent: DateTime.fromMicrosecondsSinceEpoch(map[Constants.timeSent]),
       isSeen: map[Constants.isSeen] ?? false,
-      additionalData: map[Constants.additionalData] ?? {}, // Extract additionalData
+      aesKeyEncrypted: map[Constants.aesKeyEncrypted] ?? null,
+      typingUserId: map[Constants.typingUserId] ?? null,
+      isTyping: map[Constants.isTyping]?.toString() ?? null,
+      // aesKeyEncryptedForSender: map[Constants.aesKeyEncryptedForSender] ?? null,
+      // aesKeyEncryptedForReceiver: map[Constants.aesKeyEncryptedForReceiver] ?? null,
+      // additionalData: map[Constants.additionalData] ?? {}, // Extract additionalData
     );
   }
 
@@ -68,7 +102,11 @@ class LastMessageModel {
     required String contactName,
     required String contactImage,
     String? message,
-    Map<String, dynamic>? additionalData
+    Map<String, dynamic>? aesKeyEncrypted,
+    // String? aesKeyEncryptedForSender,
+    // String? aesKeyEncryptedForReceiver
+
+    // Map<String, dynamic>? additionalData
   }) {
     return LastMessageModel(
       senderUID: senderUID,
@@ -76,10 +114,19 @@ class LastMessageModel {
       contactName: contactName,
       contactImage: contactImage,
       message: message ?? this.message,
+      tempMessage: tempMessage,
+      tempFileMessage: tempFileMessage,
+      // messageForSender: messageForSender,
+      // messageForReceiver: messageForReceiver,
       messageType: messageType,
       timeSent: timeSent,
       isSeen: isSeen,
-      additionalData: additionalData ?? this.additionalData, // Update additionalData
+      aesKeyEncrypted:  aesKeyEncrypted,
+      typingUserId: typingUserId,
+      isTyping: isTyping,
+      // aesKeyEncryptedForSender: aesKeyEncryptedForSender,
+      // aesKeyEncryptedForReceiver: aesKeyEncryptedForReceiver
+      // additionalData: additionalData ?? this.additionalData, // Update additionalData
     );
   }
 }

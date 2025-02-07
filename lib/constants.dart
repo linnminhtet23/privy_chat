@@ -53,11 +53,21 @@ class Constants {
   static const String senderImage = 'senderImage';
   static const String contactUID = 'contactUID';
   static const String message = 'message';
+    static const String tempMessage = 'tempMessage';
+        static const String tempFileMessage = 'tempFileMessage';
+
+    static const String messageForSender = 'messageForSender';
+  static const String messageForReceiver = 'messageForReceiver';
+  static const String aesKeyEncryptedForSender = 'aesKeyEncryptedForSender';
+  static const String aesKeyEncryptedForReceiver = 'aesKeyEncryptedForReceiver';
+
   static const String messageType = 'messageType';
   static const String timeSent = 'timeSent';
   static const String messageId = 'messageId';
   static const String isSeen = 'isSeen';
   static const String repliedMessage = 'repliedMessage';
+  static const String tempRepliedMessage = 'tempRepliedMessage';
+  static const String tempRepliedFileMessage = 'tempRepliedFileMessage';
   static const String repliedTo = 'repliedTo';
   static const String repliedMessageType = 'repliedMessageType';
   static const String isMe = 'isMe';
@@ -67,6 +77,10 @@ class Constants {
   static const String encryptedAesKey = 'encryptedAesKey';
   static const String iv = 'iv';
   static const String additionalData = 'additionalData';
+  static const String aesKeyEncrypted = 'aesKeyEncrypted';
+  static const String aesKeyMessageReplied = 'aesKeyMessageReplied';
+  static const String typingUserId ='typingUserId';
+  static const String isTyping ='isTyping';
 
 
 

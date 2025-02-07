@@ -21,6 +21,8 @@ class GroupModel {
   List<String> membersUIDs;
   List<String> adminsUIDs;
   List<String> awaitingApprovalUIDs;
+  String? publicKey;
+  String? privateKey;
 
   GroupModel({
     required this.creatorUID,
@@ -42,6 +44,8 @@ class GroupModel {
     required this.membersUIDs,
     required this.adminsUIDs,
     required this.awaitingApprovalUIDs,
+    this.privateKey,
+    this.publicKey,
   });
 
   // to map
@@ -66,6 +70,8 @@ class GroupModel {
       Constants.membersUIDs: membersUIDs,
       Constants.adminsUIDs: adminsUIDs,
       Constants.awaitingApprovalUIDs: awaitingApprovalUIDs,
+      Constants.publicKey: publicKey,
+      Constants.privateKey: privateKey,
     };
   }
 
@@ -94,6 +100,8 @@ class GroupModel {
       adminsUIDs: List<String>.from(map[Constants.adminsUIDs] ?? []),
       awaitingApprovalUIDs:
           List<String>.from(map[Constants.awaitingApprovalUIDs] ?? []),
+      publicKey: map[Constants.publicKey] ??null ,
+      privateKey: map[Constants.privateKey]??null,
     );
   }
 }

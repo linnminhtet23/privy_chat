@@ -2,7 +2,7 @@ import 'package:date_format/date_format.dart';
 import 'package:flutter/material.dart';
 import 'package:privy_chat/enums/enums.dart';
 import 'package:privy_chat/models/message_model.dart';
-import 'package:privy_chat/providers/authentication_provider_unused.dart';
+// import 'package:privy_chat/providers/authentication_provider_unused.dart';
 import 'package:privy_chat/widgets/display_message_type.dart';
 import 'package:privy_chat/widgets/message_reply_preview.dart';
 import 'package:flutter_chat_reactions/widgets/stacked_reactions.dart';

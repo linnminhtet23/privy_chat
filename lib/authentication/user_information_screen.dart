@@ -1,6 +1,5 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
+// import 'package:flutter/widgets.dart';
 import 'package:privy_chat/constants.dart';
 import 'package:privy_chat/utilities/global_methods.dart';
 import 'package:privy_chat/widgets/my_app_bar.dart';
@@ -145,7 +144,7 @@ class _UserInformationScreenState extends State<UserInformationScreen> {
       password: "",
       image: '',
       token: '',
-      aboutMe: 'Hey there, I\'m using Flutter Chat Pro',
+      aboutMe: 'Hey there, I\'m using Privy Chat',
       lastSeen: '',
       createdAt: '',
       isOnline: true,

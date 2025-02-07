@@ -89,7 +89,7 @@ class ProfileStatusWidget extends StatelessWidget {
             currentUser: currentUser,
             userModel: userModel,
           ),
-          const SizedBox(width: 10),
+          // const SizedBox(width: 10),
           FriendRequestButton(
             currentUser: currentUser,
             userModel: userModel,

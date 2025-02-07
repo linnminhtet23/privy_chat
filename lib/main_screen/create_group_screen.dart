@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:privy_chat/constants.dart';
 import 'package:privy_chat/enums/enums.dart';
 import 'package:privy_chat/models/group_model.dart';
-import 'package:privy_chat/providers/authentication_provider_unused.dart';
 import 'package:privy_chat/providers/group_provider.dart';
 import 'package:privy_chat/utilities/global_methods.dart';
 import 'package:privy_chat/widgets/my_app_bar.dart';
@@ -13,11 +12,11 @@ import 'package:privy_chat/widgets/display_user_image.dart';
 import 'package:privy_chat/widgets/friends_list.dart';
 import 'package:privy_chat/widgets/group_type_list_tile.dart';
 import 'package:privy_chat/widgets/settings_list_tile.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/authentication_provider.dart';
+import '../utils/encryptionutilsnewapproach.dart';
 
 class CreateGroupScreen extends StatefulWidget {
   const CreateGroupScreen({super.key});
@@ -133,6 +132,10 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
       return;
     }
 
+    final rsaKeyPair = generateRSAKeyPair();
+    final publicKey = encodePublicKeyToPem(rsaKeyPair.publicKey);
+    final privateKey = encodePrivateKeyToPem(rsaKeyPair.privateKey);
+
     GroupModel groupModel = GroupModel(
       creatorUID: uid,
       groupName: groupNameController.text,
@@ -153,6 +156,8 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
       membersUIDs: [],
       adminsUIDs: [],
       awaitingApprovalUIDs: [],
+        publicKey:publicKey,
+        privateKey: privateKey
     );
 
     // create group
@@ -196,7 +201,8 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
           vertical: 10.0,
           horizontal: 10.0,
         ),
-        child: Column(
+        child:
+        Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
@@ -275,7 +281,8 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
 
             const SizedBox(height: 10),
 
-            const Expanded(
+            const Flexible(
+              fit: FlexFit.loose,
               child: FriendsList(
                 viewType: FriendViewType.groupView,
               ),

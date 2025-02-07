@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:privy_chat/providers/authentication_provider_unused.dart';
 import 'package:privy_chat/providers/group_provider.dart';
 import 'package:privy_chat/utilities/global_methods.dart';
 import 'package:privy_chat/widgets/add_members.dart';

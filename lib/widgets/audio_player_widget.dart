@@ -77,6 +77,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
   @override
   Widget build(BuildContext context) {
     return Row(
+      mainAxisSize: MainAxisSize.min, // Prevents Row from taking extra space
       children: [
         CircleAvatar(
           radius: 22,
@@ -100,19 +101,26 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
           ),
         ),
         Expanded(
-          child: Slider.adaptive(
+          flex: 3,
+          child:
+          Slider.adaptive(
             min: 0.0,
             value: position.inSeconds.toDouble(),
             max: duration.inSeconds.toDouble(),
             onChanged: widget.viewOnly ? null : seekToPosition,
           ),
         ),
-        Text(
-          formatTime(duration - position),
-          style: TextStyle(
-            color: widget.color,
-            fontSize: 12.0,
+        Flexible(
+          // flex: 2,
+          child: Text(
+            formatTime(duration - position),
+            style: TextStyle(
+              color: widget.color,
+              fontSize: 10.0,
+            ),
+            // overflow: TextOverflow.ellipsis, // Handle overflow if the text is too long
           ),
+
         ),
       ],
     );

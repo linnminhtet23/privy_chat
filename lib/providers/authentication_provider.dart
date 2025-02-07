@@ -9,14 +9,12 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:image_cropper/image_cropper.dart';
-import 'package:pointycastle/asymmetric/api.dart';
 import 'package:privy_chat/utilities/global_methods.dart';
+import 'package:privy_chat/utils/encryptionutilsnewapproach.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../constants.dart';
 import '../models/user_model.dart';
-import '../utils/encryption_utils.dart';
-
 class AuthenticationProvider extends ChangeNotifier {
   bool _isLoading = false;
   bool _isSuccessful = false;
@@ -40,7 +38,6 @@ class AuthenticationProvider extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
-
 
   void setfinalFileImage(File? file) {
     _finalFileImage = file;
@@ -152,52 +149,28 @@ class AuthenticationProvider extends ChangeNotifier {
       // print(privateKeyPem);
 
       // Store public and private keys securely
-      if (_userModel!.publicKey == null || _userModel!.privateKey == null) {
-        print("Generating key pair...");
-
-        // Generate RSA key pair
-        final keyPair = await EncryptionUtils.generateRSAKeyPair();
-
-        final RSAPublicKey rsaPublicKey = keyPair.publicKey as RSAPublicKey;
-        final RSAPrivateKey rsaPrivateKey = keyPair.privateKey as RSAPrivateKey;
-
-        // Encode keys to PEM format
-        final publicKeyPem = EncryptionUtils.encodePublicKeyToPem(rsaPublicKey);
-        final privateKeyPem = EncryptionUtils.encodePrivateKeyToPem(rsaPrivateKey);
-
-        // Save public key to Firestore
-        await _firestore.collection('users').doc(_uid).update({
-          'publicKey': publicKeyPem,
-          'privateKey': privateKeyPem
-        });
-
-        // Save private key to secure storage
-        // await _secureStorage.write(key: 'privateKey', value: privateKeyPem);
-
-        // Update user model with the keys
-        _userModel!.publicKey = publicKeyPem;
-        _userModel!.privateKey = privateKeyPem;
-      }
+      // if (_userModel!.publicKey == null || _userModel!.privateKey == null) {
+      //   final rsaKeyPair = generateRSAKeyPair();
+      //   final publicKey = encodePublicKeyToPem(rsaKeyPair.publicKey);
+      //   final privateKey = encodePrivateKeyToPem(rsaKeyPair.privateKey);
+      //
+      //   // Save public key to Firestore
+      //   await _firestore
+      //       .collection('users')
+      //       .doc(_uid)
+      //       .update({'publicKey': publicKey, 'privateKey': privateKey});
+      //
+      //   // Save private key to secure storage
+      //   // await _secureStorage.write(key: 'privateKey', value: privateKeyPem);
+      //
+      //   // Update user model with the keys
+      //   _userModel!.publicKey = publicKey;
+      //   _userModel!.privateKey = privateKey;
+      // }
 
       notifyListeners();
 
       isSignedIn = true;
-      // Generate key pair if not exists
-      // if (_userModel!.privateKey == null || _userModel!.publicKey == null) {
-      //   print("Hello");
-      //   final keyPair = await EncryptionUtils.generateKeyPair();
-      //   final publicKeyPem = EncryptionUtils.encodePublicKeyToPem(keyPair.publicKey);
-      //   final privateKeyPem = EncryptionUtils.encodePrivateKeyToPem(keyPair.privateKey);
-      //
-      //   await _firestore.collection('users').doc(_uid).update({
-      //     'publicKey': publicKeyPem,
-      //     'privateKey': privateKeyPem,
-      //   });
-      //
-      //   _userModel!.publicKey = publicKeyPem;
-      //   _userModel!.privateKey = privateKeyPem;
-      // }
-
     } else {
       isSignedIn = false;
     }
@@ -207,7 +180,7 @@ class AuthenticationProvider extends ChangeNotifier {
 
   Future<bool> checkUserExists() async {
     DocumentSnapshot documentSnapshot =
-    await _firestore.collection(Constants.users).doc(_uid).get();
+        await _firestore.collection(Constants.users).doc(_uid).get();
     if (documentSnapshot.exists) {
       return true;
     } else {
@@ -236,7 +209,8 @@ class AuthenticationProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+      UserCredential userCredential =
+          await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
@@ -301,7 +275,7 @@ class AuthenticationProvider extends ChangeNotifier {
   // Get user data from Firestore
   Future<void> getUserDataFromFireStore() async {
     DocumentSnapshot documentSnapshot =
-    await _firestore.collection(Constants.users).doc(_uid).get();
+        await _firestore.collection(Constants.users).doc(_uid).get();
     if (documentSnapshot.exists) {
       _userModel =
           UserModel.fromMap(documentSnapshot.data() as Map<String, dynamic>);
@@ -325,7 +299,6 @@ class AuthenticationProvider extends ChangeNotifier {
     userModel.createdAt = DateTime.now().microsecondsSinceEpoch.toString();
     _userModel = userModel;
     _uid = userModel.uid;
-
 
     await _firestore
         .collection(Constants.users)
@@ -375,6 +348,7 @@ class AuthenticationProvider extends ChangeNotifier {
       onFail(e.toString());
     }
   }
+
   Stream<DocumentSnapshot> userStream({required String userID}) {
     return _firestore.collection(Constants.users).doc(userID).snapshots();
   }
@@ -396,6 +370,7 @@ class AuthenticationProvider extends ChangeNotifier {
     _uid = _userModel!.uid;
     notifyListeners();
   }
+
   // get all users stream
   Stream<QuerySnapshot> getAllUsersStream({required String userID}) {
     return _firestore
@@ -476,13 +451,13 @@ class AuthenticationProvider extends ChangeNotifier {
 
   // get a list of friends
   Future<List<UserModel>> getFriendsList(
-      String uid,
-      List<String> groupMembersUIDs,
-      ) async {
+    String uid,
+    List<String> groupMembersUIDs,
+  ) async {
     List<UserModel> friendsList = [];
 
     DocumentSnapshot documentSnapshot =
-    await _firestore.collection(Constants.users).doc(uid).get();
+        await _firestore.collection(Constants.users).doc(uid).get();
 
     List<dynamic> friendsUIDs = documentSnapshot.get(Constants.friendsUIDs);
 
@@ -492,9 +467,9 @@ class AuthenticationProvider extends ChangeNotifier {
         continue;
       }
       DocumentSnapshot documentSnapshot =
-      await _firestore.collection(Constants.users).doc(friendUID).get();
+          await _firestore.collection(Constants.users).doc(friendUID).get();
       UserModel friend =
-      UserModel.fromMap(documentSnapshot.data() as Map<String, dynamic>);
+          UserModel.fromMap(documentSnapshot.data() as Map<String, dynamic>);
       friendsList.add(friend);
     }
 
@@ -510,10 +485,10 @@ class AuthenticationProvider extends ChangeNotifier {
 
     if (groupId.isNotEmpty) {
       DocumentSnapshot documentSnapshot =
-      await _firestore.collection(Constants.groups).doc(groupId).get();
+          await _firestore.collection(Constants.groups).doc(groupId).get();
 
       List<dynamic> requestsUIDs =
-      documentSnapshot.get(Constants.awaitingApprovalUIDs);
+          documentSnapshot.get(Constants.awaitingApprovalUIDs);
 
       for (String friendRequestUID in requestsUIDs) {
         DocumentSnapshot documentSnapshot = await _firestore
@@ -521,7 +496,7 @@ class AuthenticationProvider extends ChangeNotifier {
             .doc(friendRequestUID)
             .get();
         UserModel friendRequest =
-        UserModel.fromMap(documentSnapshot.data() as Map<String, dynamic>);
+            UserModel.fromMap(documentSnapshot.data() as Map<String, dynamic>);
         friendRequestsList.add(friendRequest);
       }
 
@@ -529,10 +504,10 @@ class AuthenticationProvider extends ChangeNotifier {
     }
 
     DocumentSnapshot documentSnapshot =
-    await _firestore.collection(Constants.users).doc(uid).get();
+        await _firestore.collection(Constants.users).doc(uid).get();
 
     List<dynamic> friendRequestsUIDs =
-    documentSnapshot.get(Constants.friendRequestsUIDs);
+        documentSnapshot.get(Constants.friendRequestsUIDs);
 
     for (String friendRequestUID in friendRequestsUIDs) {
       DocumentSnapshot documentSnapshot = await _firestore
@@ -540,7 +515,7 @@ class AuthenticationProvider extends ChangeNotifier {
           .doc(friendRequestUID)
           .get();
       UserModel friendRequest =
-      UserModel.fromMap(documentSnapshot.data() as Map<String, dynamic>);
+          UserModel.fromMap(documentSnapshot.data() as Map<String, dynamic>);
       friendRequestsList.add(friendRequest);
     }
 
@@ -583,9 +558,8 @@ class AuthenticationProvider extends ChangeNotifier {
         _userModel!.image = imageUrl;
         try {
           // Fetch all chats where the user is a contact
-          final QuerySnapshot chatsSnapshot = await _firestore
-              .collection(Constants.users)
-              .get();
+          final QuerySnapshot chatsSnapshot =
+              await _firestore.collection(Constants.users).get();
 
           // Iterate through each user document
           for (var userDoc in chatsSnapshot.docs) {
@@ -630,9 +604,9 @@ class AuthenticationProvider extends ChangeNotifier {
 
   // update group image
   Future<void> _updateGroupImage(
-      String id,
-      String imageUrl,
-      ) async {
+    String id,
+    String imageUrl,
+  ) async {
     await _firestore
         .collection(Constants.groups)
         .doc(id)
@@ -641,9 +615,9 @@ class AuthenticationProvider extends ChangeNotifier {
 
   // update user image
   Future<void> _updateUserImage(
-      String id,
-      String imageUrl,
-      ) async {
+    String id,
+    String imageUrl,
+  ) async {
     await _firestore
         .collection(Constants.users)
         .doc(id)
@@ -738,8 +712,6 @@ class AuthenticationProvider extends ChangeNotifier {
         .doc(id)
         .update({Constants.groupDescription: newDesc});
   }
-
-
 
   // Logout user
   Future<void> logout() async {

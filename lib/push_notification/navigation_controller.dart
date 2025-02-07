@@ -14,6 +14,7 @@ navigationControler({
   required RemoteMessage message,
 }) {
   //if (context == null) return;
+  print("notificationType${message.data[Constants.notificationType]}");
 
   switch (message.data[Constants.notificationType]) {
     case Constants.chatNotification:

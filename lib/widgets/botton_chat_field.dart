@@ -1,8 +1,8 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:privy_chat/enums/enums.dart';
-import 'package:privy_chat/providers/authentication_provider_unused.dart';
 import 'package:privy_chat/providers/chat_provider.dart';
 import 'package:privy_chat/providers/group_provider.dart';
 import 'package:privy_chat/utilities/global_methods.dart';
@@ -44,6 +44,7 @@ class _BottomChatFieldState extends State<BottomChatField> {
   bool isShowSendButton = false;
   bool isSendingAudio = false;
   bool isShowEmojiPicker = false;
+  Timer? _typingTimer;
 
   // hide emoji container
   void hideEmojiContainer() {
@@ -93,6 +94,7 @@ class _BottomChatFieldState extends State<BottomChatField> {
     _textEditingController.dispose();
     _soundRecord?.dispose();
     _focusNode.dispose();
+    _typingTimer?.cancel(); 
     super.dispose();
   }
 
@@ -120,6 +122,50 @@ class _BottomChatFieldState extends State<BottomChatField> {
       );
       setState(() {
         isRecording = true;
+      });
+    }
+  }
+
+   // Update typing status with debounce
+  void _updateTypingStatus(bool isTyping) {
+    final currentUser = context.read<AuthenticationProvider>().userModel!;
+    final chatId = widget.groupId.isNotEmpty ? widget.groupId : widget.contactUID;
+    print("UID ${widget.contactUID}");
+
+    // Cancel the previous timer if it exists
+    _typingTimer?.cancel();
+
+    if (isTyping) {
+      // Update typing status immediately when the user starts typing
+      if (widget.groupId.isNotEmpty) {
+        context.read<ChatProvider>().updateGroupTypingStatus(
+              groupId: chatId,
+              userId: currentUser.uid,
+              isTyping: true,
+            );
+      } else {
+        context.read<ChatProvider>().updateTypingStatus(
+              chatId: chatId,
+              currentUserId: currentUser.uid,
+              isTyping: true,
+            );
+      }
+    } else {
+      // Set a delay to update typing status to false
+      _typingTimer = Timer(const Duration(seconds: 2), () {
+        if (widget.groupId.isNotEmpty) {
+          context.read<ChatProvider>().updateGroupTypingStatus(
+                groupId: chatId,
+                userId: currentUser.uid,
+                isTyping: false,
+              );
+        } else {
+          context.read<ChatProvider>().updateTypingStatus(
+                chatId: chatId,
+                currentUserId: currentUser.uid,
+                isTyping: false,
+              );
+        }
       });
     }
   }
@@ -411,9 +457,12 @@ class _BottomChatFieldState extends State<BottomChatField> {
                             setState(() {
                               isShowSendButton = value.isNotEmpty;
                             });
+                                                        _updateTypingStatus(true);
                           },
                           onTap: () {
                             hideEmojiContainer();
+                                                        _updateTypingStatus(true);
+
                           },
                         ),
                       ),

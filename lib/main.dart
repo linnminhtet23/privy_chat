@@ -1,9 +1,6 @@
-import 'dart:developer';
-import 'dart:io';
 
 import 'package:adaptive_theme/adaptive_theme.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:privy_chat/authentication/landing_screen.dart';
 import 'package:privy_chat/authentication/login_screen.dart';
@@ -22,9 +19,10 @@ import 'package:privy_chat/main_screen/profile_screen.dart';
 import 'package:privy_chat/providers/authentication_provider.dart';
 import 'package:privy_chat/providers/chat_provider.dart';
 import 'package:privy_chat/providers/group_provider.dart';
-import 'package:privy_chat/push_notification/notification_services.dart';
 import 'package:privy_chat/utilities/global_methods.dart';
 import 'package:provider/provider.dart';
+
+// import 'utils/encryptionutilsnewapproach.dart';
 
 
 @pragma('vm:entry-point')
@@ -39,6 +37,29 @@ import 'package:provider/provider.dart';
 // }
 
 void main() async {
+    // Generate RSA key pair
+  // final rsaKeyPair = generateRSAKeyPair();
+  // final publicKey = rsaKeyPair.publicKey;
+  // final privateKey = rsaKeyPair.privateKey;
+
+  // final encodePublicKey = encodePublicKeyToPem(publicKey);
+  //   final encodePrivateKey = encodePrivateKeyToPem(privateKey);
+
+  // final decodePublicKey = decodePublicKeyFromPem(encodePublicKey);
+  //   final decodePrivateKey = decodePrivateKeyFromPem(encodePrivateKey);
+  //   print("Encode Public Key: $encodePublicKey, Encode Private Key: $encodePrivateKey");
+
+  //   print("Decoded Public Key: $decodePublicKey, Decode Private Key: $decodePrivateKey");
+
+  // // Encrypt a message using hybrid encryption
+  // final plaintext = "Hello World!0000";
+  // final encryptedData = hybridEncrypt(plaintext, decodePublicKey);
+  // print("Encrypted Data: $encryptedData");
+
+  // // Decrypt the message using hybrid decryption
+  // final decryptedData = hybridDecrypt(encryptedData, decodePrivateKey);
+  // print("Decrypted Data: $decryptedData");
+
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
@@ -85,7 +106,7 @@ class MyApp extends StatelessWidget {
       builder: (theme, darkTheme) => MaterialApp(
         debugShowCheckedModeBanner: false,
         navigatorKey: navigatorKey,
-        title: 'Flutter Chat Pro',
+        title: 'Privy Chat',
         theme: theme,
         darkTheme: darkTheme,
         initialRoute: Constants.landingScreen,

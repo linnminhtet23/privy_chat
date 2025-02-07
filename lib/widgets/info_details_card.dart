@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:privy_chat/constants.dart';
 import 'package:privy_chat/models/user_model.dart';
-import 'package:privy_chat/providers/authentication_provider_unused.dart';
 import 'package:privy_chat/providers/group_provider.dart';
 import 'package:privy_chat/utilities/global_methods.dart';
 import 'package:privy_chat/widgets/profile_widgets.dart';
@@ -26,8 +25,12 @@ class InfoDetailsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     // get current user
     final authProvider = context.read<AuthenticationProvider>();
-    final uid = authProvider.userModel!.uid;
-    final phoneNumber = authProvider.userModel!.email;
+    final currentUser = authProvider.userModel;
+    if (currentUser == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    final uid = currentUser.uid;
+    final phoneNumber = currentUser.email;
     // get profile image
     final profileImage = userModel != null
         ? userModel!.image

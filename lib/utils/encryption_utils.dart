@@ -1,12 +1,15 @@
 import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
+import 'package:logger/logger.dart';
 import 'package:pointycastle/export.dart';
 import 'package:pointycastle/api.dart' as pc;
 import 'package:encrypt/encrypt.dart' as encrypt;
 import 'package:asn1lib/asn1lib.dart';
 
 class EncryptionUtils {
+    static final _logger = Logger(); // Create a logger instance
+
   // Generate RSA key pair
   static AsymmetricKeyPair<PublicKey, PrivateKey> generateRSAKeyPair({int bitLength = 2048}) {
     final rsaKeyGen = RSAKeyGenerator()
@@ -29,13 +32,9 @@ class EncryptionUtils {
       'iv': iv.base64,
     };
   } catch (e, stacktrace) {
-  // Log the error and stack trace for debugging
-  print("Decryption failed: $e");
-  print("Stacktrace: $stacktrace");
-
-  // Rethrow the exception for further handling if needed
-  rethrow;
-}
+      _logger.e("AES Encryption failed: $e", error: e, stackTrace: stacktrace);
+      rethrow;
+    }
   }
 
   static String decryptWithAES(String cipherText, String aesKey, String ivBase64) {
@@ -51,13 +50,9 @@ class EncryptionUtils {
 
     return encrypter.decrypt64(cipherText, iv: iv);
   } catch (e, stacktrace) {
-  // Log the error and stack trace for debugging
-  print("Decryption failed: $e");
-  print("Stacktrace: $stacktrace");
-
-  // Rethrow the exception for further handling if needed
-  rethrow;
-}
+      _logger.e("AES Decryption failed: $e", error: e, stackTrace: stacktrace);
+      rethrow;
+    }
   }
 
 
@@ -132,12 +127,11 @@ class EncryptionUtils {
 
       // Debugging: Log the length of the decrypted data
       print("Decrypted Data Length: ${decryptedData.length}");
-      print("Raw Decrypted Data: $decryptedData");
-
+      print("Raw Decrypted Data: ${decryptedData}");
 
       // Decode and return the decrypted data as a string
       return utf8.decode(decryptedData, allowMalformed: true);
-    } catch (e,stacktrace) {
+    } catch (e, stacktrace) {
       print("Decryption failed: $e");
       print("Stacktrace: $stacktrace");
 
@@ -197,6 +191,7 @@ class EncryptionUtils {
     for (int i = 0; i < length; i++) {
       key[i] = random.nextUint8();
     }
+    print("generated key ${key}");
     return key; // Byte array, no need for Base64 encoding
   }
 

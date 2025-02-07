@@ -1,25 +1,25 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:privy_chat/constants.dart';
 import 'package:privy_chat/enums/enums.dart';
 import 'package:privy_chat/models/last_message_model.dart';
 import 'package:privy_chat/models/message_model.dart';
 import 'package:privy_chat/models/message_reply_model.dart';
 import 'package:privy_chat/models/user_model.dart';
+import 'package:privy_chat/push_notification/notification_services.dart';
 import 'package:privy_chat/utilities/global_methods.dart';
 import 'package:uuid/uuid.dart';
 
-import '../utils/encryption_utils.dart';
+import '../utils/encryptionutilsnewapproach.dart';
+import 'package:http/http.dart' as http;
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 class ChatProvider extends ChangeNotifier {
   bool _isLoading = false;
   MessageReplyModel? _messageReplyModel;
-  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
 
   String _searchQuery = '';
 
@@ -28,6 +28,12 @@ class ChatProvider extends ChangeNotifier {
 
   bool get isLoading => _isLoading;
   MessageReplyModel? get messageReplyModel => _messageReplyModel;
+  bool _isTyping = false;
+  String _typingUserId = '';
+
+  bool get isTyping => _isTyping;
+  String get typingUserId => _typingUserId;
+
 
   void setSearchQuery(String value) {
     _searchQuery = value;
@@ -46,6 +52,20 @@ class ChatProvider extends ChangeNotifier {
 
   // firebase initialization
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  Future<void> sendNotification({
+    required String token,
+    required String title,
+    required String body,
+    required Map<String, dynamic> data,
+  }) async {
+    await NotificationServices.sendNotification(
+      token: token,
+      title: title,
+      body: body,
+      data: data,
+    );
+  }
 
 // send text message to firestore
 //   Future<void> sendTextMessage({
@@ -157,48 +177,140 @@ class ChatProvider extends ChangeNotifier {
       String repliedTo = _messageReplyModel == null
           ? ''
           : _messageReplyModel!.isMe
-          ? 'You'
-          : _messageReplyModel!.senderName;
+              ? 'You'
+              : _messageReplyModel!.senderName;
       MessageEnum repliedMessageType =
           _messageReplyModel?.messageType ?? MessageEnum.text;
 
-      // Fetch the recipient's public key from Firestore
-      final recipientData = await _firestore.collection('users').doc(contactUID).get();
-      final recipientPublicKeyPem = recipientData.data()?['publicKey'];
-      if (recipientPublicKeyPem == null) {
-        throw Exception("Recipient public key not found.");
+
+      MessageModel messageModel;
+      if (groupId.isNotEmpty) {
+        // Fetch group public and private key
+        final groupData = await _firestore.collection('groups').doc(groupId).get();
+        final groupPublicKeyPEM = groupData.data()?['publicKey'];
+
+        if (groupPublicKeyPEM == null) {
+          throw Exception("Group public key not found.");
+        }
+
+        final groupPublicKey = decodePublicKeyFromPem(groupPublicKeyPEM);
+
+        // Encrypt the message using the group's public key
+        final encryptedGroupDataString = hybridEncrypt(message, groupPublicKey);
+        final encryptedGroupData = jsonDecode(encryptedGroupDataString);
+
+        Map<String, dynamic> tempRepliedMessage = {};
+        Map<String, dynamic> tempRepliedAESKey = {};
+
+        if (repliedMessage.isNotEmpty && repliedTo.isNotEmpty) {
+          final encryptedGroupRepliedString = hybridEncrypt(repliedMessage, groupPublicKey);
+          final encryptedGroupReplied = jsonDecode(encryptedGroupRepliedString);
+
+          tempRepliedMessage = {
+            groupId: encryptedGroupReplied['aesEncryptedData'],
+          };
+          tempRepliedAESKey = {
+            groupId: encryptedGroupReplied['aesKeyEncrypted'],
+          };
+        }
+
+        // Create the encrypted message model for the group
+        messageModel = MessageModel(
+          senderUID: sender.uid,
+          senderName: sender.name,
+          senderImage: sender.image,
+          contactUID: "", // Empty for group messages
+          message: '',
+          tempMessage: {
+            groupId: encryptedGroupData['aesEncryptedData'],
+          },
+          messageType: messageType,
+          timeSent: DateTime.now(),
+          messageId: messageId,
+          isSeen: false,
+          repliedMessage: '',
+          tempRepliedMessage: tempRepliedMessage,
+          repliedTo: repliedTo,
+          repliedMessageType: repliedMessageType,
+          reactions: [],
+          isSeenBy: [sender.uid],
+          deletedBy: [],
+          aesKeyEncrypted: {
+            groupId: encryptedGroupData['aesKeyEncrypted'],
+          },
+          aesKeyMessageReplied: tempRepliedAESKey,
+        );
+      } else {
+        // Fetch the recipient's public key
+        final recipientData = await _firestore.collection('users').doc(contactUID).get();
+        final recipientPublicKeyPEM = recipientData.data()?['publicKey'];
+        final senderPublicKeyPEM = sender.publicKey;
+
+        if (recipientPublicKeyPEM == null || senderPublicKeyPEM == null) {
+          throw Exception("Public keys not found.");
+        }
+
+        final recipientPublicKey = decodePublicKeyFromPem(recipientPublicKeyPEM);
+        final senderPublicKey = decodePublicKeyFromPem(senderPublicKeyPEM);
+
+        // Encrypt the message for both sender and recipient
+        final encryptedReceiverDataString = hybridEncrypt(message, recipientPublicKey);
+        final encryptedSenderDataString = hybridEncrypt(message, senderPublicKey);
+
+        final encryptedReceiverData = jsonDecode(encryptedReceiverDataString);
+        final encryptedSenderData = jsonDecode(encryptedSenderDataString);
+
+        Map<String, dynamic> tempRepliedMessage = {};
+        Map<String, dynamic> tempRepliedAESKey = {};
+
+        if (repliedMessage.isNotEmpty && repliedTo.isNotEmpty) {
+          final encryptedReceiverRepliedString = hybridEncrypt(repliedMessage, recipientPublicKey);
+          final encryptedSenderRepliedString = hybridEncrypt(repliedMessage, senderPublicKey);
+
+          final encryptedReceiverReplied = jsonDecode(encryptedReceiverRepliedString);
+          final encryptedSenderReplied = jsonDecode(encryptedSenderRepliedString);
+
+          tempRepliedMessage = {
+            sender.uid: encryptedSenderReplied['aesEncryptedData'],
+            contactUID: encryptedReceiverReplied['aesEncryptedData'],
+          };
+          tempRepliedAESKey = {
+            sender.uid: encryptedSenderReplied['aesKeyEncrypted'],
+            contactUID: encryptedReceiverReplied['aesKeyEncrypted'],
+          };
+        }
+
+        // Create the encrypted message model for direct messages
+        messageModel = MessageModel(
+          senderUID: sender.uid,
+          senderName: sender.name,
+          senderImage: sender.image,
+          contactUID: contactUID,
+          message: '',
+          tempMessage: {
+            sender.uid: encryptedSenderData['aesEncryptedData'],
+            contactUID: encryptedReceiverData['aesEncryptedData'],
+          },
+          messageType: messageType,
+          timeSent: DateTime.now(),
+          messageId: messageId,
+          isSeen: false,
+          repliedMessage: '',
+          tempRepliedMessage: tempRepliedMessage,
+          repliedTo: repliedTo,
+          repliedMessageType: repliedMessageType,
+          reactions: [],
+          isSeenBy: [sender.uid],
+          deletedBy: [],
+          aesKeyEncrypted: {
+            sender.uid: encryptedSenderData['aesKeyEncrypted'],
+            contactUID: encryptedReceiverData['aesKeyEncrypted'],
+          },
+          aesKeyMessageReplied: tempRepliedAESKey,
+        );
       }
-      print("RSAPublicKey");
 
-      final recipientPublicKey = EncryptionUtils.decodePublicKeyFromPem(recipientPublicKeyPem);
-
-      // Encrypt the message using hybrid encryption
-      final encryptedData = EncryptionUtils.hybridEncrypt(message, recipientPublicKey);
-      print("encrypted data $encryptedData");
-      // Create the encrypted message model
-      final messageModel = MessageModel(
-        senderUID: sender.uid,
-        senderName: sender.name,
-        senderImage: sender.image,
-        contactUID: contactUID,
-        message: encryptedData['cipherText'], // Store encrypted message
-        messageType: messageType,
-        timeSent: DateTime.now(),
-        messageId: messageId,
-        isSeen: false,
-        repliedMessage: repliedMessage,
-        repliedTo: repliedTo,
-        repliedMessageType: repliedMessageType,
-        reactions: [],
-        isSeenBy: [sender.uid],
-        deletedBy: [],
-        additionalData: {
-          'encryptedAESKey': encryptedData['encryptedAESKey'],
-          'iv': encryptedData['iv'],
-        },
-      );
-
-       // 3. check if its a group message and send to group else send to contact
+      // 3. check if its a group message and send to group else send to contact
       if (groupId.isNotEmpty) {
         // handle group message
         await _firestore
@@ -216,12 +328,41 @@ class ChatProvider extends ChangeNotifier {
           Constants.messageType: messageType.name,
         });
 
+        // Get group members and send notifications
+        final groupDoc = await _firestore.collection(Constants.groups).doc(groupId).get();
+        final members = List<String>.from(groupDoc.data()?['membersUIDs'] ?? []);
+        print("Member$members");
+        
+        for (var memberId in members) {
+          if (memberId != sender.uid) {
+            final memberDoc = await _firestore.collection('users').doc(memberId).get();
+            final fcmToken = memberDoc.data()?['token'];
+            print("fcmToken${fcmToken}");
+            print("Hisxksmxksx");
+            if (fcmToken != null) {
+              await sendNotification(
+                token: fcmToken,
+                title: 'New message in ${groupDoc.data()?['groupName']}',
+                body: '${sender.name}: $message',
+                data: {
+                  'notificationType': Constants.groupChatNotification,
+                  'groupId': groupId,
+                  'contactUID': sender.uid,
+                  'contactName': sender.name,
+                  'senderImage': sender.image,
+                },
+              );
+            }
+          }
+        }
+
         // set loading to true
         setLoading(false);
         onSuccess();
         // set message reply model to null
         setMessageReplyModel(null);
       } else {
+
         // handle contact message
         await handleContactMessage(
           messageModel: messageModel,
@@ -230,11 +371,29 @@ class ChatProvider extends ChangeNotifier {
           contactImage: contactImage,
           onSucess: onSuccess,
           onError: onError,
-          additionalData: {
-            'encryptedAESKey': encryptedData['encryptedAESKey'],
-            'iv': encryptedData['iv'],
-          },
+          // additionalData: {
+          //   'encryptedAESKey': encryptedData['encryptedAESKey'],
+          //   'iv': encryptedData['iv'],
+          // },
         );
+
+        // Get contact's FCM token and send notification
+        final contactDoc = await _firestore.collection('users').doc(contactUID).get();
+        final fcmToken = contactDoc.data()?['token'];
+        
+        if (fcmToken != null) {
+          await sendNotification(
+            token: fcmToken,
+            title: 'New Message',
+            body: '${sender.name}: $message',
+            data: {
+              'notificationType': Constants.chatNotification,
+              'contactUID': sender.uid,
+              'contactName': sender.name,
+              'senderImage': sender.image,
+            },
+          );
+        }
 
         // set message reply model to null
         setMessageReplyModel(null);
@@ -282,25 +441,118 @@ class ChatProvider extends ChangeNotifier {
           '${Constants.chatFiles}/${messageType.name}/${sender.uid}/$contactUID/$messageId';
       String fileUrl = await storeFileToStorage(file: file, reference: ref);
 
-      // 3. update/set the messagemodel
-      final messageModel = MessageModel(
-        senderUID: sender.uid,
-        senderName: sender.name,
-        senderImage: sender.image,
-        contactUID: contactUID,
-        message: fileUrl,
-        messageType: messageType,
-        timeSent: DateTime.now(),
-        messageId: messageId,
-        isSeen: false,
-        repliedMessage: repliedMessage,
-        repliedTo: repliedTo,
-        repliedMessageType: repliedMessageType,
-        reactions: [],
-        isSeenBy: [sender.uid],
-        deletedBy: [],
-      );
+      MessageModel messageModel;
+      if(groupId.isNotEmpty){
+        final groupData = await _firestore.collection('groups').doc(groupId).get();
+        final groupPublicKeyPEM = groupData.data()?['publicKey'];
 
+        if (groupPublicKeyPEM == null) {
+          throw Exception("Group public key not found.");
+        }
+        final groupPublicKey = decodePublicKeyFromPem(groupPublicKeyPEM);
+
+
+        Map<String, dynamic> tempRepliedMessage = {};
+        Map<String, dynamic> tempRepliedAESKey = {};
+
+        if (repliedMessage.isNotEmpty) {
+          final encryptedRepliedString =
+          hybridEncrypt(repliedMessage, groupPublicKey);
+
+          final encryptedReplied =
+          jsonDecode(encryptedRepliedString);
+
+
+          tempRepliedMessage = {
+            groupId: encryptedReplied['aesEncryptedData'],
+          };
+
+          tempRepliedAESKey = {
+            groupId: encryptedReplied['aesKeyEncrypted'],
+          };
+        }
+        // 3. update/set the messagemodel
+        messageModel = MessageModel(
+            senderUID: sender.uid,
+            senderName: sender.name,
+            senderImage: sender.image,
+            contactUID: contactUID,
+            message: '',
+            tempFileMessage: fileUrl,
+            messageType: messageType,
+            timeSent: DateTime.now(),
+            messageId: messageId,
+            isSeen: false,
+            repliedMessage: '',
+            tempRepliedFileMessage: fileUrl,
+            tempRepliedMessage: tempRepliedMessage,
+            repliedTo: repliedTo,
+            repliedMessageType: repliedMessageType,
+            reactions: [],
+            isSeenBy: [sender.uid],
+            deletedBy: [],
+            aesKeyMessageReplied: tempRepliedAESKey);
+      }else {
+        final recipientData =
+        await _firestore.collection('users').doc(contactUID).get();
+        final recipientPublicKeyPEM = recipientData.data()?['publicKey'];
+        final senderPublicKeyPEM = sender.publicKey;
+
+        if (recipientPublicKeyPEM == null || senderPublicKeyPEM == null) {
+          throw Exception("Public keys not found.");
+        }
+
+        final recipientPublicKey = decodePublicKeyFromPem(
+            recipientPublicKeyPEM);
+        final senderPublicKey = decodePublicKeyFromPem(senderPublicKeyPEM);
+
+        Map<String, dynamic> tempRepliedMessage = {};
+        Map<String, dynamic> tempRepliedAESKey = {};
+
+        if (repliedMessage.isNotEmpty) {
+          final encryptedReciverRepliedString =
+          hybridEncrypt(repliedMessage, recipientPublicKey);
+          final encryptedSenderRepliedString =
+          hybridEncrypt(repliedMessage, senderPublicKey);
+
+          final encryptedReciverReplied =
+          jsonDecode(encryptedReciverRepliedString);
+          final encryptedSenderReplied = jsonDecode(
+              encryptedSenderRepliedString);
+
+          tempRepliedMessage = {
+            sender.uid: encryptedSenderReplied['aesEncryptedData'],
+            contactUID: encryptedReciverReplied['aesEncryptedData'],
+          };
+
+          tempRepliedAESKey = {
+            sender.uid: encryptedSenderReplied['aesKeyEncrypted'],
+            contactUID: encryptedReciverReplied['aesKeyEncrypted'],
+          };
+        }
+
+        // 3. update/set the messagemodel
+        messageModel = MessageModel(
+            senderUID: sender.uid,
+            senderName: sender.name,
+            senderImage: sender.image,
+            contactUID: contactUID,
+            message: '',
+            tempFileMessage: fileUrl,
+            messageType: messageType,
+            timeSent: DateTime.now(),
+            messageId: messageId,
+            isSeen: false,
+            repliedMessage: '',
+            tempRepliedFileMessage: fileUrl,
+            tempRepliedMessage: tempRepliedMessage,
+            repliedTo: repliedTo,
+            repliedMessageType: repliedMessageType,
+            reactions: [],
+            isSeenBy: [sender.uid],
+            deletedBy: [],
+            aesKeyMessageReplied: tempRepliedAESKey);
+      }
       // 4. check if its a group message and send to group else send to contact
       if (groupId.isNotEmpty) {
         // handle group message
@@ -353,7 +605,7 @@ class ChatProvider extends ChangeNotifier {
     required String contactImage,
     required Function onSucess,
     required Function(String p1) onError,
-     Map<String, dynamic>? additionalData,
+    //  Map<String, dynamic>? additionalData,
   }) async {
     try {
       // 0. contact messageModel
@@ -368,10 +620,18 @@ class ChatProvider extends ChangeNotifier {
         contactName: contactName,
         contactImage: contactImage,
         message: messageModel.message,
+        tempMessage: messageModel.tempMessage,
+        tempFileMessage: messageModel.tempFileMessage,
+        // messageForSender: messageModel.messageForSender,
+        // messageForReceiver: messageModel.messageForReceiver,
         messageType: messageModel.messageType,
         timeSent: messageModel.timeSent,
         isSeen: false,
-          additionalData:additionalData
+        aesKeyEncrypted: messageModel.aesKeyEncrypted,
+        // aesKeyEncryptedForSender: messageModel.aesKeyEncryptedForSender,
+        // aesKeyEncryptedForReceiver: messageModel.aesKeyEncryptedForReceiver,
+
+        // additionalData:additionalData
       );
 
       // 2. initialize last message for the contact
@@ -379,8 +639,10 @@ class ChatProvider extends ChangeNotifier {
         contactUID: messageModel.senderUID,
         contactName: messageModel.senderName,
         contactImage: messageModel.senderImage,
-          additionalData:additionalData
-
+        aesKeyEncrypted: messageModel.aesKeyEncrypted,
+        // aesKeyEncryptedForSender: messageModel.aesKeyEncryptedForSender,
+        // aesKeyEncryptedForReceiver: messageModel.aesKeyEncryptedForReceiver,
+        // additionalData:additionalData
       );
       // 3. send message to sender firestore location
       await _firestore
@@ -639,6 +901,7 @@ class ChatProvider extends ChangeNotifier {
     final userDoc = await _firestore.collection('users').doc(userId).get();
     return userDoc.data()?['privateKey'];
   }
+
   Stream<List<LastMessageModel>> getChatsListStream(String userId) {
     if (userId.isEmpty) {
       // Return an empty stream if userId is invalid
@@ -660,54 +923,75 @@ class ChatProvider extends ChangeNotifier {
       }
 
       try {
-        final privateKey = EncryptionUtils.decodePrivateKeyFromPem(privateKeyPem);
+        // final privateKey = EncryptionUtils.decodePrivateKeyFromPem(privateKeyPem);
+        final privateKey = decodePrivateKeyFromPem(privateKeyPem);
         print("Private key successfully decoded: $privateKey");
 
         return snapshot.docs.map((doc) {
           try {
             var messageData = doc.data();
             var lastMessage = LastMessageModel.fromMap(messageData);
-            print("before decryptedMessage ${messageData}");
+            final aesKeyEncrypted = lastMessage.aesKeyEncrypted?[userId];
+            final aesEncryptedData = lastMessage.tempMessage?[userId];
 
             // Check if message contains additionalData for decryption
-            if (messageData['additionalData'] != null) {
-              final additionalData = messageData['additionalData'];
-              // print("additionalData ${{
-              //   'encryptedAESKey': additionalData['encryptedAESKey'],
-              //   'cipherText': messageData['message'],
-              //   'iv': additionalData['iv'],
-              // }}");
+            if (aesKeyEncrypted != null &&
+                aesEncryptedData != null &&
+                lastMessage.messageType == MessageEnum.text) {
+              final encryptedData = {
+                'aesKeyEncrypted': aesKeyEncrypted,
+                'aesEncryptedData': aesEncryptedData,
+              };
 
-              // Decrypt the message using hybrid decryption
-              final decryptedMessage = EncryptionUtils.hybridDecrypt({
-                'encryptedAESKey': additionalData['encryptedAESKey'],
-                'cipherText': messageData['message'],
-                'iv': additionalData['iv'],
-              }, privateKey);
-
+              final decryptedMessage =
+                  hybridDecrypt(jsonEncode(encryptedData), privateKey);
+              print("decryptedMessage $decryptedMessage");
               // Update the last message with the decrypted message
               lastMessage = lastMessage.copyWith(
                   contactUID: lastMessage.contactUID,
                   contactName: lastMessage.contactName,
                   contactImage: lastMessage.contactImage,
                   message: decryptedMessage); // Update the message
+            } else {
+              lastMessage = lastMessage.copyWith(
+                  contactUID: lastMessage.contactUID,
+                  contactName: lastMessage.contactName,
+                  contactImage: lastMessage.contactImage,
+                  message: lastMessage.tempFileMessage); // Update the message
             }
+            // else if(lastMessage.contactUID == userId &&
+            //     lastMessage.aesKeyEncryptedForReceiver != null&&lastMessage.messageForReceiver==MessageEnum.text){
+            //   final aesKeyEncrypted = messageData['aesKeyEncryptedForReceiver'];
+            //   final encryptedData = {
+            //     'aesKeyEncrypted': aesKeyEncrypted,
+            //     'aesEncryptedData': messageData['messageForReceiver'],
+            //   };
+
+            //   final decryptedMessage =
+            //       hybridDecrypt(jsonEncode(encryptedData), privateKey);
+            //   print("decryptedMessage $decryptedMessage");
+            //   // Update the last message with the decrypted message
+            //   lastMessage = lastMessage.copyWith(
+            //       contactUID: lastMessage.contactUID,
+            //       contactName: lastMessage.contactName,
+            //       contactImage: lastMessage.contactImage,
+            //       message: decryptedMessage); // Update the message
+            // }
 
             return lastMessage;
           } catch (e) {
             print("Error decrypting message for document ${doc.id}: $e");
-            return LastMessageModel.fromMap(doc.data()); // Return the unmodified message in case of error
+            return LastMessageModel.fromMap(
+                doc.data()); // Return the unmodified message in case of error
           }
         }).toList();
-      } catch (e) {
+      } catch (e, stacktrace) {
         print("Error decoding private key or during decryption: $e");
+        print(stacktrace);
         rethrow; // Re-throw the error if it fails during key decoding or decryption
       }
     });
   }
-
-
-
 
   // stream messages from chat collection
   Stream<List<MessageModel>> getMessagesStream({
@@ -723,9 +1007,59 @@ class ChatProvider extends ChangeNotifier {
           .doc(contactUID)
           .collection(Constants.messages)
           .snapshots()
-          .map((snapshot) {
+          .asyncMap((snapshot) async{
+        final groupData = await _firestore.collection('groups').doc(isGroup).get();
+        final groupPrivateKeyPEM = groupData.data()?['privateKey'];
+
+        if (groupPrivateKeyPEM == null) {
+          throw Exception("Group private key not found.");
+        }
+        
+        final groupPrivateKey = decodePrivateKeyFromPem(groupPrivateKeyPEM);
+
         return snapshot.docs.map((doc) {
-          return MessageModel.fromMap(doc.data());
+          var messageData = doc.data();
+          var message =  MessageModel.fromMap(messageData);
+          final aesKeyEncrypted = message.aesKeyEncrypted?[isGroup];
+          final aesEncryptedData = message.tempMessage?[isGroup];
+          final aesKeyReplied = message.aesKeyMessageReplied?[isGroup];
+
+          final aesEncryptedRepliedData = message.tempRepliedMessage?[isGroup];
+          var decryptedRepliedMessage = '';
+          if (aesEncryptedRepliedData != null) {
+            // print("Helloooooo");
+            final encryptedRepliedData = {
+              'aesKeyEncrypted': aesKeyReplied,
+              'aesEncryptedData': aesEncryptedRepliedData,
+            };
+            print("encryptedRepliedData $encryptedRepliedData");
+            decryptedRepliedMessage =
+                hybridDecrypt(jsonEncode(encryptedRepliedData), groupPrivateKey);
+            print("decryptedRepliedMessage $decryptedRepliedMessage");
+          }
+
+          if (message.messageType != MessageEnum.text) {
+            message = message.copyWith(
+                userId: userId,
+                decryptedMessage: message.tempFileMessage,
+                decryptedRepliedMessage: decryptedRepliedMessage);
+          }else{
+            final encryptedData = {
+              'aesKeyEncrypted': aesKeyEncrypted,
+              'aesEncryptedData': aesEncryptedData,
+            };
+
+            final decryptedMessage =
+            hybridDecrypt(jsonEncode(encryptedData), groupPrivateKey);
+
+            // Update the last message with the decrypted message
+            message = message.copyWith(
+                userId: userId,
+                decryptedMessage: decryptedMessage,
+                decryptedRepliedMessage: decryptedRepliedMessage);
+          }
+
+            return message;
         }).toList();
       });
     } else {
@@ -737,9 +1071,97 @@ class ChatProvider extends ChangeNotifier {
           .doc(contactUID)
           .collection(Constants.messages)
           .snapshots()
-          .map((snapshot) {
+          .asyncMap((snapshot) async {
+        final privateKeyPem = await _getUserPrivateKey(userId);
+
+        if (privateKeyPem == null) {
+          throw Exception("User private key not found.");
+        }
+        final privateKey = decodePrivateKeyFromPem(privateKeyPem);
+
         return snapshot.docs.map((doc) {
-          return MessageModel.fromMap(doc.data());
+          var messageData = doc.data();
+          var message = MessageModel.fromMap(messageData);
+          final aesKeyEncrypted = message.aesKeyEncrypted?[userId];
+          final aesEncryptedData = message.tempMessage?[userId];
+          final aesKeyReplied = message.aesKeyMessageReplied?[userId];
+
+          final aesEncryptedRepliedData = message.tempRepliedMessage?[userId];
+
+          // print("messaffeeelkke ${aesEncryptedRepliedData}");
+
+          print("Private key successfully decoded: $privateKey");
+          print("aesKeyEncrypted $userId $aesKeyEncrypted");
+          print("aesEncryptedData $userId $aesEncryptedData");
+          var decryptedRepliedMessage = '';
+          if (aesEncryptedRepliedData != null) {
+            // print("Helloooooo");
+            final encryptedRepliedData = {
+              'aesKeyEncrypted': aesKeyReplied,
+              'aesEncryptedData': aesEncryptedRepliedData,
+            };
+            print("encryptedRepliedData $encryptedRepliedData");
+            decryptedRepliedMessage =
+                hybridDecrypt(jsonEncode(encryptedRepliedData), privateKey);
+            print("decryptedRepliedMessage $decryptedRepliedMessage");
+          }
+
+          if (message.messageType != MessageEnum.text){
+            print("hello");
+            // var decryptedRepliedMessage = '';
+            // if(aesEncryptedRepliedData !=null){
+            // print("Helloooooo");
+            //   final encryptedRepliedData={
+            //   'aesKeyEncrypted': aesKeyReplied,
+            //   'aesEncryptedData': aesEncryptedRepliedData,
+            //   };
+            //   print("encryptedRepliedData $encryptedRepliedData");
+            //   decryptedRepliedMessage =
+            //     hybridDecrypt(jsonEncode(encryptedRepliedData), privateKey);
+            // print("decryptedRepliedMessage $decryptedRepliedMessage");
+
+            // }
+            message = message.copyWith(
+                userId: userId,
+                decryptedMessage: message.tempFileMessage,
+                decryptedRepliedMessage: decryptedRepliedMessage);
+          }else{
+            final encryptedData = {
+              'aesKeyEncrypted': aesKeyEncrypted,
+              'aesEncryptedData': aesEncryptedData,
+            };
+
+            final decryptedMessage =
+                hybridDecrypt(jsonEncode(encryptedData), privateKey);
+
+            // Update the last message with the decrypted message
+            message = message.copyWith(
+                userId: userId,
+                decryptedMessage: decryptedMessage,
+                decryptedRepliedMessage: decryptedRepliedMessage);
+            // .copyWith(
+            //     contactUID: message.contactUID,
+            //     contactName: message.contactName,
+            //     contactImage: message.contactImage,
+            //     message:decryptedMessage); // Update the message
+          }
+          // else if(message.contactUID == userId &&
+          //     message.aesKeyEncryptedForReceiver != null&&message.messageForReceiver==MessageEnum.text){
+          //   final aesKeyEncrypted = messageData['aesKeyEncryptedForReceiver'];
+          //   final encryptedData = {
+          //     'aesKeyEncrypted': aesKeyEncrypted,
+          //     'aesEncryptedData': messageData['messageForReceiver'],
+          //   };
+
+          //   final decryptedMessage =
+          //       hybridDecrypt(jsonEncode(encryptedData), privateKey);
+          //   print("decryptedMessage $decryptedMessage");
+          //   // Update the last message with the decrypted message
+          //     message =
+          //       message.copyWith(userId: userId, decryptedMessage: decryptedMessage);
+          // }
+          print("message $message");
+          return message;
         }).toList();
       });
     }
@@ -751,7 +1173,8 @@ class ChatProvider extends ChangeNotifier {
     required String contactUID,
     required bool isGroup,
   }) {
-    // 1. check if its a group message
+    try {
+      // 1. check if its a group message
     if (isGroup) {
       // handle group message
       return _firestore
@@ -770,7 +1193,6 @@ class ChatProvider extends ChangeNotifier {
         return count;
       });
     } else {
-      // handle contact message
       return _firestore
           .collection(Constants.users)
           .doc(userId)
@@ -780,101 +1202,115 @@ class ChatProvider extends ChangeNotifier {
           .where(Constants.isSeen, isEqualTo: false)
           .where(Constants.senderUID, isNotEqualTo: userId)
           .snapshots()
-          .map((event) => event.docs.length);
+          .map((event) {
+        try {
+          int unreadCount = event.docs.length;
+          print("Unread messages for $contactUID: $unreadCount");
+          return unreadCount;
+        } catch (e) {
+          print("Error processing unread count: $e");
+          return 0; // Return 0 unread messages in case of error
+        }
+      }).handleError((error) {
+        print("Firestore stream error (private messages): $error");
+      });
+    }
+    } catch (e) {
+      print("Unexpected error in getUnreadMessagesStream: $e");
+      return Stream.value(0); // Return a fallback stream emitting 0
     }
   }
 
   // set message status
   Future<void> setMessageStatus({
-  required String currentUserId,
-  required String contactUID,
-  required String messageId,
-  required List<String> isSeenByList,
-  required bool isGroupChat,
-}) async {
-  try {
-    // Check if it's a group chat
-    if (isGroupChat) {
-      if (isSeenByList.contains(currentUserId)) {
-        return;
-      } else {
-        // Add the current user to the seenByList in all messages
-        var messageDoc = await _firestore
-            .collection(Constants.groups)
-            .doc(contactUID)
-            .collection(Constants.messages)
-            .doc(messageId)
-            .get();
-        
-        if (messageDoc.exists) {
-          await _firestore
+    required String currentUserId,
+    required String contactUID,
+    required String messageId,
+    required List<String> isSeenByList,
+    required bool isGroupChat,
+  }) async {
+    try {
+      // Check if it's a group chat
+      if (isGroupChat) {
+        if (isSeenByList.contains(currentUserId)) {
+          return;
+        } else {
+          // Add the current user to the seenByList in all messages
+          var messageDoc = await _firestore
               .collection(Constants.groups)
               .doc(contactUID)
               .collection(Constants.messages)
               .doc(messageId)
-              .update({
-            Constants.isSeenBy: FieldValue.arrayUnion([currentUserId]),
-          });
+              .get();
+
+          if (messageDoc.exists) {
+            await _firestore
+                .collection(Constants.groups)
+                .doc(contactUID)
+                .collection(Constants.messages)
+                .doc(messageId)
+                .update({
+              Constants.isSeenBy: FieldValue.arrayUnion([currentUserId]),
+            });
+          } else {
+            print("Message document not found for group chat.");
+          }
+        }
+      } else {
+        // Handle contact message
+        var userMessageDoc = await _firestore
+            .collection(Constants.users)
+            .doc(currentUserId)
+            .collection(Constants.chats)
+            .doc(contactUID)
+            .collection(Constants.messages)
+            .doc(messageId)
+            .get();
+
+        if (userMessageDoc.exists) {
+          // Update the current message as seen
+          await _firestore
+              .collection(Constants.users)
+              .doc(currentUserId)
+              .collection(Constants.chats)
+              .doc(contactUID)
+              .collection(Constants.messages)
+              .doc(messageId)
+              .update({Constants.isSeen: true});
+
+          // Update the contact message as seen
+          await _firestore
+              .collection(Constants.users)
+              .doc(contactUID)
+              .collection(Constants.chats)
+              .doc(currentUserId)
+              .collection(Constants.messages)
+              .doc(messageId)
+              .update({Constants.isSeen: true});
+
+          // Update the last message as seen for current user
+          await _firestore
+              .collection(Constants.users)
+              .doc(currentUserId)
+              .collection(Constants.chats)
+              .doc(contactUID)
+              .update({Constants.isSeen: true});
+
+          // Update the last message as seen for contact
+          await _firestore
+              .collection(Constants.users)
+              .doc(contactUID)
+              .collection(Constants.chats)
+              .doc(currentUserId)
+              .update({Constants.isSeen: true});
         } else {
-          print("Message document not found for group chat.");
+          print("Message document not found for contact.");
         }
       }
-    } else {
-      // Handle contact message
-      var userMessageDoc = await _firestore
-          .collection(Constants.users)
-          .doc(currentUserId)
-          .collection(Constants.chats)
-          .doc(contactUID)
-          .collection(Constants.messages)
-          .doc(messageId)
-          .get();
-
-      if (userMessageDoc.exists) {
-        // Update the current message as seen
-        await _firestore
-            .collection(Constants.users)
-            .doc(currentUserId)
-            .collection(Constants.chats)
-            .doc(contactUID)
-            .collection(Constants.messages)
-            .doc(messageId)
-            .update({Constants.isSeen: true});
-
-        // Update the contact message as seen
-        await _firestore
-            .collection(Constants.users)
-            .doc(contactUID)
-            .collection(Constants.chats)
-            .doc(currentUserId)
-            .collection(Constants.messages)
-            .doc(messageId)
-            .update({Constants.isSeen: true});
-
-        // Update the last message as seen for current user
-        await _firestore
-            .collection(Constants.users)
-            .doc(currentUserId)
-            .collection(Constants.chats)
-            .doc(contactUID)
-            .update({Constants.isSeen: true});
-
-        // Update the last message as seen for contact
-        await _firestore
-            .collection(Constants.users)
-            .doc(contactUID)
-            .collection(Constants.chats)
-            .doc(currentUserId)
-            .update({Constants.isSeen: true});
-      } else {
-        print("Message document not found for contact.");
-      }
+    } catch (e) {
+      print("Exception $e");
     }
-  } catch (e) {
-    print("Exception $e");
   }
-}
-
 
   // delete message
   Future<void> deleteMessage({
@@ -1007,4 +1443,70 @@ class ChatProvider extends ChangeNotifier {
             .collection(Constants.chats)
             .snapshots();
   }
+
+    Future<void> updateTypingStatus({
+    required String chatId,
+    required String currentUserId,
+    required bool isTyping,
+  }) async {
+    try {
+      await _firestore
+          .collection(Constants.users)
+          .doc(chatId)
+          .collection(Constants.chats)
+          .doc(currentUserId)
+          .update({
+        'isTyping': isTyping,
+        'typingUserId': isTyping ? currentUserId : '',
+      });
+      print("Hello");
+    } catch (e) {
+      print('Error updating typing status: $e');
+    }
+  }
+    void listenForTypingStatus(String chatId,String currentUserId) {
+    _firestore.collection(Constants.users)
+          .doc(currentUserId)
+          .collection(Constants.chats)
+          .doc(chatId).snapshots().listen((snapshot) {
+      if (snapshot.exists) {
+        print("isTyping ${snapshot['isTyping']}");
+        // _isTyping = snapshot['isTyping'] ?? false;
+        // _typingUserId = snapshot['typingUserId'] ?? '';
+        notifyListeners();
+      }
+    });
+  }
+
+  Future<void> updateGroupTypingStatus({
+  required String groupId,
+  required String userId,
+  required bool isTyping,
+}) async {
+  try {
+    if (isTyping) {
+      await _firestore.collection('groups').doc(groupId).update({
+        'typingUsers': FieldValue.arrayUnion([userId]),
+      });
+    } else {
+      await _firestore.collection('groups').doc(groupId).update({
+        'typingUsers': FieldValue.arrayRemove([userId]),
+      });
+    }
+  } catch (e) {
+    print('Error updating group typing status: $e');
+  }
+}
+
+// Listen for group typing status
+void listenForGroupTypingStatus(String groupId) {
+  _firestore.collection('groups').doc(groupId).snapshots().listen((snapshot) {
+    if (snapshot.exists) {
+      final typingUsers = List<String>.from(snapshot['typingUsers'] ?? []);
+      _typingUserId = typingUsers.isNotEmpty ? typingUsers.first : '';
+      _isTyping = typingUsers.isNotEmpty;
+      notifyListeners();
+    }
+  });
+}
 }

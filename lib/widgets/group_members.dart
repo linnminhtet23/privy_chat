@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:privy_chat/constants.dart';
-import 'package:privy_chat/providers/authentication_provider_unused.dart';
+// import 'package:privy_chat/providers/authentication_provider_unused.dart';
 import 'package:privy_chat/providers/group_provider.dart';
 import 'package:provider/provider.dart';
 

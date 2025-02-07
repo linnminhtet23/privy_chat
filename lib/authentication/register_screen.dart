@@ -7,6 +7,7 @@ import 'package:privy_chat/utilities/assets_manager.dart';
 import 'package:provider/provider.dart';
 
 import '../models/user_model.dart';
+import '../utils/encryptionutilsnewapproach.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
@@ -47,7 +48,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   child: Lottie.asset(AssetsMenager.chatBubble),
                 ),
                 Text(
-                  'Register to Flutter Chat Pro',
+                  'Register to Privy Chat',
                   style: GoogleFonts.poppins(
                     fontSize: 28,
                     fontWeight: FontWeight.w500,
@@ -55,7 +56,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  'Create an account to get started with Flutter Chat Pro',
+                  'Create an account to get started with Privy Chat',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.poppins(
                     fontSize: 16,
@@ -153,6 +154,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       //   email: _emailController.text.trim(),
                       //   name: _usernameController.text.trim(),
                       // );
+                      final rsaKeyPair = generateRSAKeyPair();
+                      final publicKey = encodePublicKeyToPem(rsaKeyPair.publicKey);
+                      final privateKey = encodePrivateKeyToPem(rsaKeyPair.privateKey);
                       authProvider.signupWithEmailAndPassword(
                         username: _usernameController.text.trim(),
                         email: _emailController.text.trim(),
@@ -164,13 +168,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           password: _passwordController.text.trim(),
                           image: '',
                           token: '',
-                          aboutMe: 'Hey there, I\'m using Flutter Chat Pro',
+                          aboutMe: 'Hey there, I\'m using Privy Chat',
                           lastSeen: '',
                           createdAt: DateTime.now().toString(),
                           isOnline: false,
                           friendsUIDs: [],
                           friendRequestsUIDs: [],
                           sentFriendRequestsUIDs: [],
+                          publicKey:publicKey,
+                          privateKey: privateKey,
                         ),
                         context: context,
                         onSuccess: () {

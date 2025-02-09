@@ -16,17 +16,17 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     // get arguments passed from previous screen
-    final arguments = ModalRoute.of(context)!.settings.arguments as Map;
-    // get the contactUID from the arguments
-    final contactUID = arguments[Constants.contactUID];
-    // get the contactName from the arguments
-    final contactName = arguments[Constants.contactName];
-    // get the contactImage from the arguments
-    final contactImage = arguments[Constants.contactImage];
-    // get the groupId from the arguments
-    final groupId = arguments[Constants.groupId];
+    final arguments = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>? ?? {};
+    // get the contactUID from the arguments with default empty string
+    final contactUID = arguments[Constants.contactUID] as String? ?? '';
+    // get the contactName from the arguments with default empty string
+    final contactName = arguments[Constants.contactName] as String? ?? '';
+    // get the contactImage from the arguments with default empty string
+    final contactImage = arguments[Constants.contactImage] as String? ?? '';
+    // get the groupId from the arguments with default empty string
+    final groupId = arguments[Constants.groupId] as String? ?? '';
     // check if the groupId is empty - then its a chat with a friend else its a group chat
-    final isGroupChat = groupId.isNotEmpty ? true : false;
+    final isGroupChat = groupId.isNotEmpty;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,

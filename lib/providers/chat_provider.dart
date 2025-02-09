@@ -346,10 +346,15 @@ class ChatProvider extends ChangeNotifier {
                 body: '${sender.name}: $message',
                 data: {
                   'notificationType': Constants.groupChatNotification,
-                  'groupId': groupId,
-                  'contactUID': sender.uid,
-                  'contactName': sender.name,
-                  'senderImage': sender.image,
+                  'groupModel': jsonEncode({
+                    'groupId': groupId,
+                    'groupName': groupDoc.data()?['groupName'],
+                    'senderImage': groupDoc.data()?['groupImage'],
+                    'createdAt': groupDoc.data()?['createdAt'],
+                    'membersUIDs': groupDoc.data()?['membersUIDs'],
+                    'adminsUIDs': groupDoc.data()?['adminsUIDs'],
+                    'groupType': groupDoc.data()?['groupType'],
+                  }),
                 },
               );
             }
@@ -572,9 +577,37 @@ class ChatProvider extends ChangeNotifier {
           Constants.messageType: messageType.name,
         });
 
-        // set loading to true
+        // set loading to false
         setLoading(false);
         onSucess();
+        // send notification to group members
+        final groupDoc = await _firestore.collection(Constants.groups).doc(groupId).get();
+        final List<String> members = List<String>.from(groupDoc.data()?['members'] ?? []);
+        for (var memberId in members) {
+          if (memberId != sender.uid) {
+            final memberDoc = await _firestore.collection('users').doc(memberId).get();
+            final token = memberDoc.data()?['token'];
+            if (token != null) {
+              await NotificationServices.sendNotification(
+                token: token,
+                title: '${sender.name} sent a file in ${groupDoc.data()?['groupName']}',
+                body: 'File: ${messageType.name}',
+                data: {
+                  'notificationType': Constants.groupChatNotification,
+                  'groupModel': jsonEncode({
+                    'groupId': groupId,
+                    'groupName': groupDoc.data()?['groupName'],
+                    'senderImage': groupDoc.data()?['groupImage'],
+                    'createdAt': groupDoc.data()?['createdAt'],
+                    'membersUIDs': groupDoc.data()?['membersUIDs'],
+                    'adminsUIDs': groupDoc.data()?['adminsUIDs'],
+                    'groupType': groupDoc.data()?['groupType'],
+                  }),
+                },
+              );
+            }
+          }
+        }
         // set message reply model to null
         setMessageReplyModel(null);
       } else {
@@ -587,6 +620,24 @@ class ChatProvider extends ChangeNotifier {
           onSucess: onSucess,
           onError: onError,
         );
+
+        // send notification to contact
+        final contactDoc = await _firestore.collection('users').doc(contactUID).get();
+        final token = contactDoc.data()?['token'];
+        if (token != null) {
+          await NotificationServices.sendNotification(
+            token: token,
+            title: sender.name,
+            body: 'File: ${messageType.name}',
+            data: {
+              'notificationType': Constants.chatNotification,
+              'contactUID': sender.uid,
+              'contactName': sender.name,
+              'senderImage': sender.image,
+              'messageType': messageType.name,
+            },
+          );
+        }
 
         // set message reply model to null
         setMessageReplyModel(null);

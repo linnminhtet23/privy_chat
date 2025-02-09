@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:privy_chat/enums/enums.dart';
@@ -302,6 +303,7 @@ class _BottomChatFieldState extends State<BottomChatField> {
 
   Widget buildLoackedMessages() {
     final uid = context.read<AuthenticationProvider>().userModel!.uid;
+    print("userId $uid");
 
     final groupProvider = context.read<GroupProvider>();
     // check if is admin
@@ -309,6 +311,9 @@ class _BottomChatFieldState extends State<BottomChatField> {
 
     // chec if is member
     final isMember = groupProvider.groupModel.membersUIDs.contains(uid);
+    print("groupModel ${groupProvider.groupModel.membersUIDs}");
+
+    print("isMember $isMember");
 
     // check is messages are locked
     final isLocked = groupProvider.groupModel.lockMessages;

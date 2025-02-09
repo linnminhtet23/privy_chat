@@ -55,12 +55,16 @@ navigationControler({
       break;
 
     case Constants.groupChatNotification:
+      print("group chat noti");
       // parse the JSON string to a map
       Map<String, dynamic> jsonMap =
           jsonDecode(message.data[Constants.groupModel]);
+      print("group $jsonMap");
+
       // transform the map to a simple GroupModel object
       final Map<String, dynamic> flatGroupModelMap =
           flattenGroupModelMap(jsonMap);
+      print("flatGroupModelMap $flatGroupModelMap");
 
       final groupModel = GroupModel.fromMap(flatGroupModelMap);
       log('JSON: $jsonMap');
@@ -99,28 +103,32 @@ navigationControler({
 Map<String, dynamic> flattenGroupModelMap(Map<String, dynamic> complexMap) {
   Map<String, dynamic> flatMap = {};
 
-  complexMap['_fieldsProto'].forEach((key, value) {
-    switch (value['valueType']) {
-      case 'stringValue':
-        flatMap[key] = value['stringValue'];
-        break;
-      case 'booleanValue':
-        flatMap[key] = value['booleanValue'];
-        break;
-      case 'integerValue':
-        flatMap[key] = int.parse(value['integerValue']);
-        break;
-      case 'arrayValue':
-        flatMap[key] = value['arrayValue']['values']
-            .map<String>((item) => item['stringValue'] as String)
-            .toList();
-        break;
-      // Add other cases if necessary
-      default:
-        // Handle unknown types
-        flatMap[key] = null;
-    }
-  });
+  // Check if this is a Firestore document structure
+  if (complexMap.containsKey('_fieldsProto')) {
+    complexMap['_fieldsProto'].forEach((key, value) {
+      switch (value['valueType']) {
+        case 'stringValue':
+          flatMap[key] = value['stringValue'];
+          break;
+        case 'booleanValue':
+          flatMap[key] = value['booleanValue'];
+          break;
+        case 'integerValue':
+          flatMap[key] = int.parse(value['integerValue']);
+          break;
+        case 'arrayValue':
+          flatMap[key] = value['arrayValue']['values']
+              .map<String>((item) => item['stringValue'] as String)
+              .toList();
+          break;
+        default:
+          flatMap[key] = null;
+      }
+    });
+  } else {
+    // Handle regular JSON object from notification
+    flatMap = Map<String, dynamic>.from(complexMap);
+  }
 
   return flatMap;
 }

@@ -83,6 +83,7 @@ class GroupProvider extends ChangeNotifier {
     updateGroupDataInFireStore();
   }
 
+
   void setApproveNewMembers({required bool value}) {
     _groupModel.approveMembers = value;
     notifyListeners();

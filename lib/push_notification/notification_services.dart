@@ -79,6 +79,69 @@ class NotificationServices {
     return accessToken;
   }
 
+  // static Future<void> sendNotification({
+  //   required String token,
+  //   required String title,
+  //   required String body,
+  //   required Map<String, dynamic> data,
+  // }) async {
+  //   try {
+  //     log('Sending notification - Title: $title, Body: $body, Token: $token');
+  //     log('Notification data: ${jsonEncode(data)}');
+
+  //     final String accessToken = await getAccessToken();
+
+  //     final Map<String, dynamic> message = {
+  //       'message': {
+  //         'token': token,
+  //         'notification': {
+  //           'title': title,
+  //           'body': body
+  //         },
+  //         'android': {
+  //           'notification': {
+  //             'channelId': NotificationChennels.highInportanceChannel.id,
+  //             'notification_count': 1
+  //           }
+  //         },
+  //         'apns': {
+  //           'payload': {
+  //             'aps': {
+  //               'sound': 'default',
+  //               'badge': 1,
+  //               'content-available': 1,
+  //               'mutable-content': 1
+  //             }
+  //           },
+  //           'headers': {
+  //             'apns-priority': '10'
+  //           }
+  //         },
+  //         'data': data
+  //       }
+  //     };
+
+  //     final http.Response response = await http.post(
+  //       Uri.parse('https://fcm.googleapis.com/v1/projects/privychat-4bc01/messages:send'),
+  //       headers: <String, String>{
+  //         'Content-Type': 'application/json',
+  //         'Authorization': 'Bearer $accessToken'
+  //       },
+  //       body: jsonEncode(message)
+  //     );
+
+  //     if (response.statusCode == 200) {
+  //       final responseData = jsonDecode(response.body);
+  //       log('Notification sent successfully. Response: ${response.body}');
+  //       log('Success count: ${responseData['success'] ?? 1}, Failure count: ${responseData['failure'] ?? 0}');
+  //     } else {
+  //       log('Failed to send notification. Status code: ${response.statusCode}');
+  //       log('Error response: ${response.body}');
+  //     }
+  //   } catch (e, stackTrace) {
+  //     log('Error sending notification:', error: e, stackTrace: stackTrace);
+  //   }
+  // }
   static Future<void> sendNotification({
     required String token,
     required String title,
@@ -91,35 +154,37 @@ class NotificationServices {
 
       final String accessToken = await getAccessToken();
 
-      final Map<String, dynamic> message = {
-        'message': {
-          'token': token,
-          'notification': {
-            'title': title,
-            'body': body
-          },
-          'android': {
-            'notification': {
-              'channelId': NotificationChennels.highInportanceChannel.id,
-              'notification_count': 1
+          final Map<String, dynamic> message = {
+            'message': {
+              'token': token,
+              'notification': {
+                'title': title,
+                'body': body,
+                'image': data['senderImage'] ?? '',
+              },
+              'android': {
+                'notification': {
+                  'channelId': NotificationChennels.highInportanceChannel.id,
+                  'notification_count': 1,
+                  'image': data['senderImage'] ?? '',
+                }
+              },
+              'apns': {
+                'payload': {
+                  'aps': {
+                    'sound': 'default',
+                    'badge': 1,
+                    'content-available': 1,
+                    'mutable-content': 1
+                  }
+                },
+                'headers': {
+                  'apns-priority': '10'
+                }
+              },
+              'data': data
             }
-          },
-          'apns': {
-            'payload': {
-              'aps': {
-                'sound': 'default',
-                'badge': 1,
-                'content-available': 1,
-                'mutable-content': 1
-              }
-            },
-            'headers': {
-              'apns-priority': '10'
-            }
-          },
-          'data': data
-        }
-      };
+          };
 
       final http.Response response = await http.post(
         Uri.parse('https://fcm.googleapis.com/v1/projects/privychat-4bc01/messages:send'),
@@ -178,7 +243,6 @@ class NotificationServices {
     RemoteNotification? notification = message.notification;
     AndroidNotification? android = notification?.android;
     AppleNotification? apple = notification?.apple;
-
     String channelId = android?.channelId ?? 'default_channel';
 
     flutterLocalNotificationsPlugin.show(

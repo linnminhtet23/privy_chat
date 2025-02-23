@@ -63,6 +63,8 @@ class Constants {
 
   static const String messageType = 'messageType';
   static const String timeSent = 'timeSent';
+  static const String isTyping = 'isTyping';
+  static const String typingInChatRoom = 'typingInChatRoom';
   static const String messageId = 'messageId';
   static const String isSeen = 'isSeen';
   static const String repliedMessage = 'repliedMessage';
@@ -80,7 +82,6 @@ class Constants {
   static const String aesKeyEncrypted = 'aesKeyEncrypted';
   static const String aesKeyMessageReplied = 'aesKeyMessageReplied';
   static const String typingUserId ='typingUserId';
-  static const String isTyping ='isTyping';
 
 
 

@@ -17,7 +17,6 @@ import 'package:privy_chat/push_notification/navigation_controller.dart';
 import 'package:privy_chat/push_notification/notification_services.dart';
 import 'package:privy_chat/utilities/global_methods.dart';
 import 'package:provider/provider.dart';
-import 'package:privy_chat/providers/chat_provider.dart';
 
 
 import '../providers/authentication_provider.dart';

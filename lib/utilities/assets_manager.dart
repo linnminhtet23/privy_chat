@@ -4,4 +4,6 @@ class AssetsMenager {
 
   static const String userImage = '${_images}user_icon.png';
   static const String chatBubble = '${_lottie}chat_bubble.json';
+  static const String typingIndicator = '${_lottie}indicator.json';
+
 }

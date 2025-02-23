@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
@@ -20,6 +21,8 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 class ChatProvider extends ChangeNotifier {
   bool _isLoading = false;
   MessageReplyModel? _messageReplyModel;
+  Timer? _typingTimer;
+  static const _typingDuration = Duration(milliseconds: 1000);
 
   String _searchQuery = '';
 
@@ -802,6 +805,11 @@ class ChatProvider extends ChangeNotifier {
     // a reaction is saved as senderUID=reaction
     String reactionToAdd = '$senderUID=$reaction';
 
+    // Get the sender's information for notification
+    // final senderDoc = await _firestore.collection('users').doc(senderUID).get();
+    // final senderName = senderDoc.data()?['name'] ?? 'Someone';
+
+
     try {
       // 1. check if its a group message
       if (groupId) {
@@ -843,6 +851,32 @@ class ChatProvider extends ChangeNotifier {
           }
 
           // 11. update the message
+          await _firestore
+              .collection(Constants.groups)
+              .doc(contactUID)
+              .collection(Constants.messages)
+              .doc(messageId)
+              .update({Constants.reactions: message.reactions});
+
+          // Send notification to message sender if they're not the one reacting
+          // if (message.senderUID != senderUID) {
+          //   final groupDoc = await _firestore.collection(Constants.groups).doc(contactUID).get();
+          //   final groupName = groupDoc.data()?['groupName'] ?? 'Group';
+          //   final senderFCMToken = (await _firestore.collection('users').doc(message.senderUID).get()).data()?['token'];
+          //
+          //   if (senderFCMToken != null) {
+          //     await sendNotification(
+          //       token: senderFCMToken,
+          //       title: groupName,
+          //       body: '$senderName reacted with $reaction to your message',
+          //       data: {
+          //         'notificationType': Constants.groupChatNotification,
+          //         'groupId': contactUID,
+          //         'messageId': messageId
+          //       },
+          //     );
+          //   }
+          // }
           await _firestore
               .collection(Constants.groups)
               .doc(contactUID)
@@ -912,6 +946,25 @@ class ChatProvider extends ChangeNotifier {
               .collection(Constants.messages)
               .doc(messageId)
               .update({Constants.reactions: message.reactions});
+
+          // Send notification to message sender if they're not the one reacting
+          // if (message.senderUID != senderUID) {
+          //   final contactFCMToken = (await _firestore.collection('users').doc(message.senderUID).get()).data()?['token'];
+          //
+          //   if (contactFCMToken != null) {
+          //     await sendNotification(
+          //       token: contactFCMToken,
+          //       title: senderName,
+          //       body: 'reacted with $reaction to your message',
+          //       data: {
+          //         'notificationType': Constants.chatNotification,
+          //         'contactUID': senderUID,
+          //         'contactName': senderName,
+          //         'messageId': messageId
+          //       },
+          //     );
+          //   }
+          // }
         }
       }
 
@@ -1495,38 +1548,104 @@ class ChatProvider extends ChangeNotifier {
             .snapshots();
   }
 
-    Future<void> updateTypingStatus({
-    required String chatId,
-    required String currentUserId,
+  //   Future<void> updateTypingStatus({
+  //   required String chatId,
+  //   required String currentUserId,
+  //   required bool isTyping,
+  // }) async {
+  //   try {
+  //     // Cancel any existing timer
+  //     _typingTimer?.cancel();
+
+  //     await _firestore
+  //         .collection(Constants.users)
+  //         .doc(chatId)
+  //         .collection(Constants.chats)
+  //         .doc(currentUserId)
+  //         .update({
+  //       'isTyping': isTyping,
+  //       'typingUserId': isTyping ? currentUserId : '',
+  //     });
+
+  //     if (isTyping) {
+  //       // Start timer to automatically set typing to false after duration
+  //       _typingTimer = Timer(_typingDuration, () async {
+  //         await _firestore
+  //             .collection(Constants.users)
+  //             .doc(chatId)
+  //             .collection(Constants.chats)
+  //             .doc(currentUserId)
+  //             .update({
+  //           'isTyping': false,
+  //           'typingUserId': '',
+  //         });
+  //       });
+  //     }
+  //   } catch (e) {
+  //     print('Error updating typing status: $e');
+  //   }
+  // }
+
+  Future<void> updateTypingStatus({
+    required String userId,
+    required String chatRoomId,
     required bool isTyping,
   }) async {
     try {
+      print('Updating typing status - User: $userId, ChatRoom: $chatRoomId, isTyping: $isTyping');
+      
+      // Cancel any existing timer
+      if (_typingTimer != null) {
+        print('Cancelling existing typing timer');
+        _typingTimer?.cancel();
+      }
+
+      // Update typing status and typingInChatRoom in user document
+      print('Updating Firestore document for user: $userId');
       await _firestore
           .collection(Constants.users)
-          .doc(chatId)
-          .collection(Constants.chats)
-          .doc(currentUserId)
+          .doc(userId)
           .update({
         'isTyping': isTyping,
-        'typingUserId': isTyping ? currentUserId : '',
-      });
-      print("Hello");
+        'typingInChatRoom': isTyping ? chatRoomId : null,
+      }).then((_) => print('Firestore update successful'))
+        .catchError((error) => print('Firestore update failed: $error'));
+
+      if (isTyping) {
+        print('Starting typing timer for auto-reset');
+        // Start timer to automatically set typing to false after duration
+        _typingTimer = Timer(_typingDuration, () async {
+          print('Typing timer expired - resetting status');
+          try {
+            await _firestore
+                .collection(Constants.users)
+                .doc(userId)
+                .update({
+                  'isTyping': false,
+                  'typingInChatRoom': null,
+                });
+            print('Successfully reset typing status after timer');
+          } catch (timerError) {
+            print('Error resetting typing status after timer: $timerError');
+          }
+        });
+      }
     } catch (e) {
-      print('Error updating typing status: $e');
+      print('Error in updateTypingStatus: $e');
     }
   }
-    void listenForTypingStatus(String chatId,String currentUserId) {
-    _firestore.collection(Constants.users)
-          .doc(currentUserId)
-          .collection(Constants.chats)
-          .doc(chatId).snapshots().listen((snapshot) {
-      if (snapshot.exists) {
-        print("isTyping ${snapshot['isTyping']}");
-        // _isTyping = snapshot['isTyping'] ?? false;
-        // _typingUserId = snapshot['typingUserId'] ?? '';
-        notifyListeners();
-      }
-    });
+  
+    void listenForTypingStatus(String chatId, String currentUserId) {
+      _firestore.collection(Constants.users)
+            .doc(currentUserId)
+            .snapshots().listen((snapshot) {
+        if (snapshot.exists) {
+          print("isTyping ${snapshot['isTyping']}");
+          _isTyping = snapshot['isTyping'] ?? false;
+          _typingUserId = snapshot['typingInChatRoom'] ?? '';
+          notifyListeners();
+        }
+      });
   }
 
   Future<void> updateGroupTypingStatus({

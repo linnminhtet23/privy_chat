@@ -11,6 +11,8 @@ class UserModel {
   String lastSeen;
   String createdAt;
   bool isOnline;
+  bool isTyping;
+  String? typingInChatRoom;
   String? publicKey;
   String? privateKey;
   List<String> friendsUIDs;
@@ -28,6 +30,8 @@ class UserModel {
     required this.lastSeen,
     required this.createdAt,
     required this.isOnline,
+    this.isTyping = false,
+    this.typingInChatRoom,
     this.privateKey,
     this.publicKey,
     required this.friendsUIDs,
@@ -48,6 +52,8 @@ class UserModel {
       lastSeen: map[Constants.lastSeen] ?? '',
       createdAt: map[Constants.createdAt] ?? '',
       isOnline: map[Constants.isOnline] ?? false,
+      isTyping: map[Constants.isTyping] ?? false,
+      typingInChatRoom: map[Constants.typingInChatRoom],
       publicKey: map[Constants.publicKey] ??null ,
       privateKey: map[Constants.privateKey]??null,
       friendsUIDs: List<String>.from(map[Constants.friendsUIDs] ?? []),
@@ -71,6 +77,8 @@ class UserModel {
       Constants.lastSeen: lastSeen,
       Constants.createdAt: createdAt,
       Constants.isOnline: isOnline,
+      Constants.isTyping: isTyping,
+      Constants.typingInChatRoom: typingInChatRoom,
       Constants.publicKey: publicKey,
       Constants.privateKey: privateKey,
       Constants.friendsUIDs: friendsUIDs,

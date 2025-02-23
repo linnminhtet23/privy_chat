@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -7,6 +9,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 class NotificationUtils {
   static const String _serverKey = "BCHgcQJYPeP7td0-mom9rq3DuJVPZRM2Vj96VVBm605qCWEZ6TTOI10xBYhIaosIjjOhR71pv5Z7zt5KtuLFhtg"; // Replace with your actual server key
   static const String _tokenKey = "device_token";
+  
+  // Reference to Firestore
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  Timer? _typingTimer;
+  static const _typingDuration = Duration(milliseconds: 1000); // Duration to consider user as typing
 
   Future<void> initialize() async {
     await Firebase.initializeApp();
@@ -111,5 +118,33 @@ class NotificationUtils {
   static Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     await Firebase.initializeApp();
     print("Handling a background message: ${message.messageId}");
+  }
+
+  // Update user typing status
+  Future<void> updateTypingStatus({
+    required String userId,
+    required String chatRoomId,
+    required bool isTyping,
+  }) async {
+    try {
+      // Cancel any existing timer
+      _typingTimer?.cancel();
+
+      // Update typing status in Firestore
+      await _firestore.collection('chatRooms').doc(chatRoomId).update({
+        'typingUsers.$userId': isTyping,
+      });
+
+      if (isTyping) {
+        // Start timer to automatically set typing to false after duration
+        _typingTimer = Timer(_typingDuration, () async {
+          await _firestore.collection('chatRooms').doc(chatRoomId).update({
+            'typingUsers.$userId': false,
+          });
+        });
+      }
+    } catch (e) {
+      print('Error updating typing status: $e');
+    }
   }
 }

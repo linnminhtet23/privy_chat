@@ -38,8 +38,13 @@ class _ChatAppBarState extends State<ChatAppBar> {
         final userModel =
             UserModel.fromMap(snapshot.data!.data() as Map<String, dynamic>);
 
-        DateTime lastSeen =
-            DateTime.fromMillisecondsSinceEpoch(int.parse(userModel.lastSeen));
+        DateTime lastSeen = DateTime.fromMillisecondsSinceEpoch((int.parse(userModel.lastSeen) / 1000).round());
+
+        String getLastSeenText() {
+          // if (userModel.isTyping && userModel.typingInChatRoom == widget.contactUID) return 'Typing...';
+          if (userModel.isOnline) return 'Online';
+          return 'Last seen ${timeago.format(lastSeen)}';
+        }
 
         return Row(
           children: [
@@ -47,7 +52,6 @@ class _ChatAppBarState extends State<ChatAppBar> {
               imageUrl: userModel.image,
               radius: 20,
               onTap: () {
-                // navigate to this friends profile with uid as argument
                 Navigator.pushNamed(context, Constants.profileScreen,
                     arguments: userModel.uid);
               },
@@ -63,14 +67,14 @@ class _ChatAppBarState extends State<ChatAppBar> {
                   ),
                 ),
                 Text(
-                  userModel.isOnline
-                      ? 'Online'
-                      : 'Last seen ${timeago.format(lastSeen)}',
+                  getLastSeenText(),
                   style: GoogleFonts.poppins(
                     fontSize: 12,
-                    color: userModel.isOnline
+                    color: userModel.isTyping
                         ? Colors.green
-                        : Colors.grey.shade600,
+                        : userModel.isOnline
+                            ? Colors.green
+                            : Colors.grey.shade600,
                   ),
                 ),
               ],

@@ -1,11 +1,15 @@
 import 'package:date_format/date_format.dart';
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
 import 'package:privy_chat/models/group_model.dart';
 import 'package:privy_chat/models/last_message_model.dart';
-// import 'package:privy_chat/providers/authentication_provider_unused.dart';
+import 'package:privy_chat/utilities/assets_manager.dart';
 import 'package:privy_chat/utilities/global_methods.dart';
 import 'package:privy_chat/widgets/unread_message_counter.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:privy_chat/utilities/assets_manager.dart';
+
 
 import '../providers/authentication_provider.dart';
 
@@ -46,14 +50,106 @@ class ChatWidget extends StatelessWidget {
     // get the messageType
     final messageType = chat != null ? chat!.messageType : group!.messageType;
     return ListTile(
-      leading: userImageWidget(
-        imageUrl: imageUrl,
-        radius: 40,
-        onTap: () {},
+      leading: Stack(
+        children: [
+          userImageWidget(
+            imageUrl: imageUrl,
+            radius: 40,
+            onTap: () {},
+          ),
+          StreamBuilder<DocumentSnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('users')
+                .doc(contactUID)
+                .snapshots(),
+            builder: (context, snapshot) {
+              final isOnline = snapshot.hasData && snapshot.data!.exists
+                  ? snapshot.data!.get('isOnline') ?? false
+                  : false;
+              return Positioned(
+                bottom: 0,
+                right: 0,
+                child: Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isOnline ? Colors.green : Colors.grey,
+                    border: Border.all(color: Colors.white, width: 2),
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       contentPadding: EdgeInsets.zero,
       title: Text(name),
-      subtitle: Row(
+      subtitle: !isGroup ? StreamBuilder<DocumentSnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('users')
+            .doc(contactUID)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.hasData && snapshot.data!.exists) {
+            final isTyping = snapshot.data!.get('isTyping') ?? false;
+            final typingInChatRoom = snapshot.data!.get('typingInChatRoom') ?? '';
+            if (isTyping && typingInChatRoom == uid) {
+              return Row(
+                children: [
+                  SizedBox(
+                    height: 32,
+                    width: 32,
+                    child: Lottie.asset(
+                      AssetsMenager.typingIndicator,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ],
+              );
+            }
+            return Row(
+              children: [
+                // Container(
+                //   width: 8,
+                //   height: 8,
+                //   decoration: BoxDecoration(
+                //     shape: BoxShape.circle,
+                //     color: isOnline ? Colors.green : Colors.grey,
+                //   ),
+                // ),
+                const SizedBox(width: 5),
+                uid == senderUID
+                    ? const Text(
+                        'You:',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      )
+                    : const SizedBox(),
+                const SizedBox(width: 5),
+                messageToShow(
+                  type: messageType,
+                  message: lastMessage,
+                ),
+              ],
+            );
+          }
+          return Row(
+            children: [
+              uid == senderUID
+                  ? const Text(
+                      'You:',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    )
+                  : const SizedBox(),
+              const SizedBox(width: 5),
+              messageToShow(
+                type: messageType,
+                message: lastMessage,
+              ),
+            ],
+          );
+        },
+      ) : Row(
         children: [
           uid == senderUID
               ? const Text(

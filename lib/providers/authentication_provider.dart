@@ -9,8 +9,8 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:image_cropper/image_cropper.dart';
+import 'package:privy_chat/push_notification/notification_services.dart';
 import 'package:privy_chat/utilities/global_methods.dart';
-import 'package:privy_chat/utils/encryptionutilsnewapproach.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../constants.dart';
@@ -190,10 +190,19 @@ class AuthenticationProvider extends ChangeNotifier {
 
   // update user status
   Future<void> updateUserStatus({required bool value}) async {
-    await _firestore
-        .collection(Constants.users)
-        .doc(_auth.currentUser!.uid)
-        .update({Constants.isOnline: value});
+    try {
+      final timestamp = DateTime.now().microsecondsSinceEpoch.toString();
+      await _firestore
+          .collection(Constants.users)
+          .doc(_auth.currentUser!.uid)
+          .update({
+            Constants.isOnline: value,
+            Constants.lastSeen: timestamp,
+          });
+    } catch (e) {
+      print('Error updating user status: $e');
+      throw e;
+    }
   }
 
   // Signup with email and password
@@ -384,15 +393,36 @@ class AuthenticationProvider extends ChangeNotifier {
     required String friendID,
   }) async {
     try {
-      // add our uid to friends request list
-      await _firestore.collection(Constants.users).doc(friendID).update({
-        Constants.friendRequestsUIDs: FieldValue.arrayUnion([_uid]),
-      });
+      // Get friend's user data to get their token
+      final friendData = await _getFriendData(friendID);
+      
+      if (friendData != null && friendData[Constants.token] != null) {
+        // Get current user's data for notification
+        final currentUserDoc = await _firestore.collection(Constants.users).doc(_uid).get();
+        final currentUserData = currentUserDoc.data();
 
-      // add friend uid to our friend requests sent list
-      await _firestore.collection(Constants.users).doc(_uid).update({
-        Constants.sentFriendRequestsUIDs: FieldValue.arrayUnion([friendID]),
-      });
+        // add our uid to friends request list
+        await _firestore.collection(Constants.users).doc(friendID).update({
+          Constants.friendRequestsUIDs: FieldValue.arrayUnion([_uid]),
+        });
+
+        // add friend uid to our friend requests sent list
+        await _firestore.collection(Constants.users).doc(_uid).update({
+          Constants.sentFriendRequestsUIDs: FieldValue.arrayUnion([friendID]),
+        });
+
+        // Send notification to friend
+        await NotificationServices.sendNotification(
+          token: friendData[Constants.token],
+          title: 'New Friend Request',
+          body: '${currentUserData?[Constants.name] ?? 'Someone'} sent you a friend request',
+          data: {
+            Constants.notificationType: Constants.friendRequestNotification,
+            'senderImage': currentUserData?[Constants.image] ?? '',
+            Constants.uid: _uid,
+          },
+        );
+      }
     } on FirebaseException catch (e) {
       print(e);
     }
@@ -415,15 +445,40 @@ class AuthenticationProvider extends ChangeNotifier {
   }
 
   Future<void> acceptFriendRequest({required String friendID}) async {
-    // add our uid to friends list
-    await _firestore.collection(Constants.users).doc(friendID).update({
-      Constants.friendsUIDs: FieldValue.arrayUnion([_uid]),
-    });
+    // try {
+      // Get friend's user data to get their token
+          final friendData = await _getFriendData(friendID);
+      
+      // Get current user's data for notification
+      // final currentUserDoc = await _firestore.collection(Constants.users).doc(_uid).get();
+      // final currentUserData = currentUserDoc.data();
+      final currentUserData = await _getFriendData(_uid);
 
-    // add friend uid to our friends list
-    await _firestore.collection(Constants.users).doc(_uid).update({
-      Constants.friendsUIDs: FieldValue.arrayUnion([friendID]),
-    });
+      // add our uid to friends list
+      await _firestore.collection(Constants.users).doc(friendID).update({
+        Constants.friendsUIDs: FieldValue.arrayUnion([_uid]),
+      });
+
+      // add friend uid to our friends list
+      await _firestore.collection(Constants.users).doc(_uid).update({
+        Constants.friendsUIDs: FieldValue.arrayUnion([friendID]),
+      });
+
+      // Send notification to friend about accepted request
+      if (friendData != null && friendData[Constants.token] != null) {
+        await NotificationServices.sendNotification(
+          token: friendData[Constants.token],
+          title: 'Friend Request Accepted',
+          body: '${currentUserData?[Constants.name] ?? 'Someone'} accepted your friend request',
+          data: {
+            Constants.notificationType: Constants.requestReplyNotification,
+            'senderImage': currentUserData?[Constants.image] ?? '',
+            Constants.contactUID: _uid,
+            Constants.contactName: currentUserData?[Constants.name] ?? '',
+            Constants.contactImage: currentUserData?[Constants.image] ?? '',
+          },
+        );
+      }
 
     // remove our uid from friends request list
     await _firestore.collection(Constants.users).doc(friendID).update({
@@ -447,6 +502,16 @@ class AuthenticationProvider extends ChangeNotifier {
     await _firestore.collection(Constants.users).doc(_uid).update({
       Constants.friendsUIDs: FieldValue.arrayRemove([friendID]),
     });
+  }
+
+  Future<Map<String, dynamic>?> _getFriendData(String? friendID) async {
+    try {
+      final friendDoc = await _firestore.collection(Constants.users).doc(friendID).get();
+      return friendDoc.data();
+    } catch (e) {
+      print('Error fetching friend data: $e');
+      return null;
+    }
   }
 
   // get a list of friends
@@ -715,12 +780,21 @@ class AuthenticationProvider extends ChangeNotifier {
 
   // Logout user
   Future<void> logout() async {
-    await _auth.signOut();
-    SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
-    await sharedPreferences.remove(Constants.userModel);
-    _userModel = null;
-    _uid = null;
-    notifyListeners();
+    try {
+      if (_uid != null) {
+        // Update user status before logging out
+        await updateUserStatus(value: false);
+      }
+      await _auth.signOut();
+      SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
+      await sharedPreferences.remove(Constants.userModel);
+      _userModel = null;
+      _uid = null;
+      notifyListeners();
+    } catch (e) {
+      print('Error during logout: $e');
+      throw e;
+    }
   }
 
   // Store file to Firebase Storage

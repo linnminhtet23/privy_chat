@@ -1,9 +1,14 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:privy_chat/constants.dart';
+import 'package:privy_chat/providers/authentication_provider.dart';
 import 'package:privy_chat/widgets/botton_chat_field.dart';
 import 'package:privy_chat/widgets/chat_app_bar.dart';
 import 'package:privy_chat/widgets/chat_list.dart';
 import 'package:privy_chat/widgets/group_chat_app_bar.dart';
+import 'package:provider/provider.dart';
+import 'package:lottie/lottie.dart';
+import 'package:privy_chat/utilities/assets_manager.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -47,6 +52,48 @@ class _ChatScreenState extends State<ChatScreen> {
                 groupId: groupId,
               ),
             ),
+           
+                 StreamBuilder<DocumentSnapshot>(
+                  stream: FirebaseFirestore.instance
+                      .collection(Constants.users)
+                      .doc(contactUID)
+                      .snapshots(),
+                  builder: (context, snapshot) {
+                    if (snapshot.hasError) {
+                      return const SizedBox.shrink();
+                    }
+
+                    if (!snapshot.hasData || !snapshot.data!.exists) {
+                      return const SizedBox.shrink();
+                    }
+                    
+                    final data = snapshot.data!.data() as Map<String, dynamic>;
+                    final isTyping = data['isTyping'] ?? false;
+                    final typingInChatRoom = data['typingInChatRoom'];
+                    
+                    // Only show typing indicator when the contact is typing in this chat
+                    if (isTyping && typingInChatRoom == context.read<AuthenticationProvider>().userModel!.uid) {
+                       
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              height: 60,
+                              width: 60,
+                              child: Lottie.asset(
+                                AssetsMenager.typingIndicator,
+                                fit: BoxFit.contain,
+                              ),
+                            )
+                          ],
+                        ),
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
+           
             BottomChatField(
               contactUID: contactUID,
               contactName: contactName,

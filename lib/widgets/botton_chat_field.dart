@@ -3,9 +3,11 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
 import 'package:privy_chat/enums/enums.dart';
 import 'package:privy_chat/providers/chat_provider.dart';
 import 'package:privy_chat/providers/group_provider.dart';
+import 'package:privy_chat/utilities/assets_manager.dart';
 import 'package:privy_chat/utilities/global_methods.dart';
 import 'package:privy_chat/widgets/message_reply_preview.dart';
 import 'package:flutter_sound_record/flutter_sound_record.dart';
@@ -45,6 +47,7 @@ class _BottomChatFieldState extends State<BottomChatField> {
   bool isShowSendButton = false;
   bool isSendingAudio = false;
   bool isShowEmojiPicker = false;
+  bool isTyping = false;
   Timer? _typingTimer;
 
   // hide emoji container
@@ -88,6 +91,15 @@ class _BottomChatFieldState extends State<BottomChatField> {
     _soundRecord = FlutterSoundRecord();
     _focusNode = FocusNode();
     super.initState();
+
+    // Initialize typing status listener
+    final currentUser = context.read<AuthenticationProvider>().userModel;
+    // if (currentUser != null) {
+    //   context.read<ChatProvider>().listenForTypingStatus(
+    //     widget.contactUID,
+    //     currentUser.uid,
+    //   );
+    // }
   }
 
   @override
@@ -131,41 +143,61 @@ class _BottomChatFieldState extends State<BottomChatField> {
   void _updateTypingStatus(bool isTyping) {
     final currentUser = context.read<AuthenticationProvider>().userModel!;
     final chatId = widget.groupId.isNotEmpty ? widget.groupId : widget.contactUID;
-    print("UID ${widget.contactUID}");
+
+    print('Updating typing status - isTyping: $isTyping');
+    print('Chat ID: $chatId, User ID: ${currentUser.uid}');
+    print('Is Group Chat: ${widget.groupId.isNotEmpty}');
 
     // Cancel the previous timer if it exists
-    _typingTimer?.cancel();
+    if (_typingTimer != null) {
+      print('Cancelling previous typing timer');
+      _typingTimer?.cancel();
+    }
 
     if (isTyping) {
+      print('Setting typing status to TRUE');
       // Update typing status immediately when the user starts typing
       if (widget.groupId.isNotEmpty) {
+        print('Updating group typing status to TRUE');
         context.read<ChatProvider>().updateGroupTypingStatus(
               groupId: chatId,
               userId: currentUser.uid,
               isTyping: true,
-            );
+            ).then((_) => print('Group typing status updated successfully'))
+            .catchError((error) => print('Error updating group typing status: $error'));
       } else {
+        print('Updating individual chat typing status to TRUE');
         context.read<ChatProvider>().updateTypingStatus(
-              chatId: chatId,
-              currentUserId: currentUser.uid,
+              chatRoomId: chatId,
+              userId: currentUser.uid,
               isTyping: true,
-            );
+            ).then((_) => print('Individual typing status updated successfully'))
+            .catchError((error) => print('Error updating typing status: $error'));
       }
     } else {
+      print('Starting timer to set typing status to FALSE');
       // Set a delay to update typing status to false
       _typingTimer = Timer(const Duration(seconds: 2), () {
+        print('Timer completed - setting typing status to FALSE');
+        setState(() {
+          isTyping = false;
+        });
         if (widget.groupId.isNotEmpty) {
+          print('Updating group typing status to FALSE');
           context.read<ChatProvider>().updateGroupTypingStatus(
                 groupId: chatId,
                 userId: currentUser.uid,
                 isTyping: false,
-              );
+              ).then((_) => print('Group typing status updated successfully'))
+              .catchError((error) => print('Error updating group typing status: $error'));
         } else {
+          print('Updating individual chat typing status to FALSE');
           context.read<ChatProvider>().updateTypingStatus(
-                chatId: chatId,
-                currentUserId: currentUser.uid,
+                chatRoomId: chatId,
+                userId: currentUser.uid,
                 isTyping: false,
-              );
+              ).then((_) => print('Individual typing status updated successfully'))
+              .catchError((error) => print('Error updating typing status: $error'));
         }
       });
     }
@@ -296,9 +328,38 @@ class _BottomChatFieldState extends State<BottomChatField> {
 
   @override
   Widget build(BuildContext context) {
-    return widget.groupId.isNotEmpty
-        ? buildLoackedMessages()
-        : buildBottomChatField();
+    return Column(
+      children: [
+        // if (context.watch<ChatProvider>().isTyping && 
+        //    context.watch<ChatProvider>().typingUserId !=context.read<AuthenticationProvider>().userModel!.uid)
+        //   Container(
+        //     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        //     child: Row(
+        //       children: [
+        //         SizedBox(
+        //           height: 30,
+        //           width: 30,
+        //           child: Lottie.asset(
+        //             AssetsMenager.chatBubble,
+        //             fit: BoxFit.contain,
+        //           ),
+        //         ),
+        //         const SizedBox(width: 8),
+        //         Text(
+        //           'Typing...',
+        //           style: TextStyle(
+        //             color: Colors.grey[600],
+        //             fontSize: 14,
+        //           ),
+        //         ),
+        //       ],
+        //     ),
+        //   ),
+        widget.groupId.isNotEmpty
+            ? buildLoackedMessages()
+            : buildBottomChatField(),
+      ],
+    );
   }
 
   Widget buildLoackedMessages() {
@@ -462,15 +523,30 @@ class _BottomChatFieldState extends State<BottomChatField> {
                             setState(() {
                               isShowSendButton = value.isNotEmpty;
                             });
-                                                        _updateTypingStatus(true);
+                              _updateTypingStatus(true);
+                              setState(() {
+                                isTyping = true;
+                              });
                           },
                           onTap: () {
                             hideEmojiContainer();
-                                                        _updateTypingStatus(true);
-
+                            _updateTypingStatus(true);
+                            setState(() {
+                              isTyping = true;
+                            });
                           },
                         ),
                       ),
+                      // if (context.watch<ChatProvider>().isTyping && 
+                      //     context.watch<ChatProvider>().typingUserId == widget.contactUID)
+                      //   SizedBox(
+                      //     height: 50,
+                      //     width: 50,
+                      //     child: Lottie.asset(
+                      //       AssetsMenager.chatBubble,
+                      //       fit: BoxFit.contain,
+                      //     ),
+                      //   ),
                       chatProvider.isLoading
                           ? const Padding(
                               padding: EdgeInsets.all(8.0),

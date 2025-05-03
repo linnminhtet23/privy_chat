@@ -180,6 +180,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                         context: context,
                         onSuccess: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text("Account created")),
+                          );
                           // Navigate to the home screen or show success message
                           Navigator.pushReplacementNamed(context, Constants.loginScreen);
                         },

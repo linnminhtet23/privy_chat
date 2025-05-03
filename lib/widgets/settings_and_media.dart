@@ -21,20 +21,20 @@ class SettingsAndMedia extends StatelessWidget {
         padding: const EdgeInsets.only(left: 8.0, right: 8.0),
         child: Column(
           children: [
+            // SettingsListTile(
+            //   title: 'Media',
+            //   icon: Icons.image,
+            //   iconContainerColor: Colors.deepPurple,
+            //   onTap: () {
+            //     // navigate to media screen
+            //   },
+            // ),
+            // const Divider(
+            //   thickness: 0.5,
+            //   color: Colors.grey,
+            // ),
             SettingsListTile(
-              title: 'Media',
-              icon: Icons.image,
-              iconContainerColor: Colors.deepPurple,
-              onTap: () {
-                // navigate to media screen
-              },
-            ),
-            const Divider(
-              thickness: 0.5,
-              color: Colors.grey,
-            ),
-            SettingsListTile(
-              title: 'Group Seetings',
+              title: 'Group Settings',
               icon: Icons.settings,
               iconContainerColor: Colors.deepPurple,
               onTap: () {

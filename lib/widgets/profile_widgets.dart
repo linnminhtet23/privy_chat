@@ -319,41 +319,48 @@ class GetRequestWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // get requestWidget
-    Widget getRequestWidget() {
-      // check if user is admin
-      if (isAdmin) {
-        // chec if there is any request
-        if (groupProvider.groupModel.awaitingApprovalUIDs.isNotEmpty) {
-          return InkWell(
-            onTap: () {
-              // navigate to add members screen
-              // navigate to friend requests screen
-              Navigator.of(context).push(MaterialPageRoute(builder: (context) {
-                return FriendRequestScreen(
-                  groupId: groupProvider.groupModel.groupId,
-                );
-              }));
-            },
-            child: const CircleAvatar(
-              radius: 18,
-              backgroundColor: Colors.orangeAccent,
-              child: Icon(
-                Icons.person_add,
-                color: Colors.white,
-                size: 15,
-              ),
-            ),
-          );
-        } else {
-          return const SizedBox();
+    return StreamBuilder<List<String>>(
+      stream: groupProvider.getAwaitingApprovalStream(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) return const SizedBox();
+        
+        // get requestWidget
+        Widget getRequestWidget() {
+          // check if user is admin
+          if (isAdmin) {
+            // check if there is any request
+            if (snapshot.data!.isNotEmpty) {
+              return InkWell(
+                onTap: () {
+                  // navigate to add members screen
+                  // navigate to friend requests screen
+                  Navigator.of(context).push(MaterialPageRoute(builder: (context) {
+                    return FriendRequestScreen(
+                      groupId: groupProvider.groupModel.groupId,
+                    );
+                  }));
+                },
+                child: const CircleAvatar(
+                  radius: 18,
+                  backgroundColor: Colors.orangeAccent,
+                  child: Icon(
+                    Icons.person_add,
+                    color: Colors.white,
+                    size: 15,
+                  ),
+                ),
+              );
+            } else {
+              return const SizedBox();
+            }
+          } else {
+            return const SizedBox();
+          }
         }
-      } else {
-        return const SizedBox();
-      }
-    }
 
-    return getRequestWidget();
+        return getRequestWidget();
+      },
+    );
   }
 }
 

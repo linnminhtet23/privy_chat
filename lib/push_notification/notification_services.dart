@@ -7,7 +7,6 @@ import 'package:privy_chat/utilities/global_methods.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:http/http.dart' as http;
 import 'package:googleapis_auth/auth_io.dart' as auth;
-import 'package:googleapis/servicecontrol/v1.dart' as servicecontrol;
 
 class NotificationServices {
   static final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
@@ -74,6 +73,7 @@ class NotificationServices {
     final credentials = auth.ServiceAccountCredentials.fromJson(serviceAccountJson);
     final client = await auth.clientViaServiceAccount(credentials, scopes);
     final accessToken = client.credentials.accessToken.data;
+  // print("notification access token ${accessToken}");
     client.close(); // Important: Close the client to prevent resource leaks
     print(accessToken);
     return accessToken;

@@ -95,145 +95,155 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
         ),
         body: Consumer<GroupProvider>(
           builder: (context, groupProvider, child) {
-            return Padding(
-              padding:
-                  const EdgeInsets.symmetric(vertical: 20.0, horizontal: 10.0),
-              child: Column(
-                children: [
-                  SettingsSwitchListTile(
-                    title: 'Edit Group Settings',
-                    subtitle:
-                        'Only Admins can change group info, name, image and description',
-                    icon: Icons.edit,
-                    containerColor: Colors.green,
-                    value: groupProvider.groupModel.editSettings,
-                    onChanged: (value) {
-                      groupProvider.setEditSettings(value: value);
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  SettingsSwitchListTile(
-                    title: 'Approve New Members',
-                    subtitle:
-                        'New Members will be added only after admin approval',
-                    icon: Icons.approval,
-                    containerColor: Colors.blue,
-                    value: groupProvider.groupModel.approveMembers,
-                    onChanged: (value) {
-                      groupProvider.setApproveNewMembers(value: value);
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  groupProvider.groupModel.approveMembers
-                      ? SettingsSwitchListTile(
-                          title: 'Request to Join',
-                          subtitle:
-                              'Request incoming members to join the group, before viewing group content',
-                          icon: Icons.request_page,
-                          containerColor: Colors.orange,
-                          value: groupProvider.groupModel.requestToJoing,
-                          onChanged: (value) {
-                            groupProvider.setRequestToJoin(value: value);
-                          },
-                        )
-                      : const SizedBox.shrink(),
-                  const SizedBox(height: 10),
-                  SettingsSwitchListTile(
-                    title: 'Lock Messages',
-                    subtitle:
-                        'Only Admins can send messages, other members can only read messages',
-                    icon: Icons.lock,
-                    containerColor: Colors.deepPurple,
-                    value: groupProvider.groupModel.lockMessages,
-                    onChanged: (value) {
-                      groupProvider.setLockMessages(value: value);
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  Card(
-                    color:
-                        getAdminsContainerColor(groupProvider: groupProvider),
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: 8.0, right: 8.0),
-                      child: SettingsListTile(
-                          title: 'Group Admins',
-                          subtitle: getGroupAdminsNames(
-                              groupProvider: groupProvider, uid: uid),
-                          icon: Icons.admin_panel_settings,
-                          iconContainerColor: Colors.red,
-                          onTap: () {
-                            // check if there are group members
-                            if (groupProvider.groupMembersList.isEmpty) {
-                              return;
-                            }
-                            groupProvider.setEmptyTemps();
-                            // show bottom sheet to select admins
-                            showBottomSheet(
-                                context: context,
-                                builder: (context) {
-                                  return SizedBox(
-                                    height: MediaQuery.of(context).size.height *
-                                        0.9,
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(8.0),
-                                      child: Column(
-                                        children: [
-                                          Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              const Text(
-                                                'Select Group Admins',
-                                                style: TextStyle(
-                                                  fontSize: 18,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                              TextButton(
-                                                onPressed: () {
-                                                  groupProvider
-                                                      .updateGroupDataInFireStoreIfNeeded()
-                                                      .whenComplete(() {
-                                                    Navigator.pop(context);
-                                                  });
-                                                },
-                                                child: const Text(
-                                                  'Done',
-                                                  style: TextStyle(
-                                                      color: Colors.blue,
-                                                      fontSize: 18,
-                                                      fontWeight:
-                                                          FontWeight.bold),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 10),
-                                          Expanded(
-                                            child: ListView.builder(
-                                              itemCount: groupProvider
-                                                  .groupMembersList.length,
-                                              itemBuilder: (context, index) {
-                                                final friend = groupProvider
-                                                    .groupMembersList[index];
-                                                return FriendWidget(
-                                                  friend: friend,
-                                                  viewType:
-                                                      FriendViewType.groupView,
-                                                  isAdminView: true,
-                                                );
-                                              },
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                });
-                          }),
+            print("groupProvidermmm ${groupProvider.groupModel.isPrivate}");
+            return SingleChildScrollView(
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(vertical: 20.0, horizontal: 10.0),
+                child: Column(
+                  children: [
+                    SettingsSwitchListTile(
+                      title: 'Edit Group Settings',
+                      subtitle:
+                          'Only Admins can change group info, name, image and description',
+                      icon: Icons.edit,
+                      containerColor: Colors.green,
+                      value: groupProvider.groupModel.editSettings,
+                      onChanged: (value) {
+                        groupProvider.setEditSettings(value: value);
+                      },
                     ),
-                  )
-                ],
+                    const SizedBox(height: 10),
+                    SettingsSwitchListTile(
+                      title: 'Approve New Members',
+                      subtitle:
+                          'New Members will be join by themselves',
+                      icon: Icons.approval,
+                      containerColor: Colors.blue,
+                      value: groupProvider.groupModel.approveMembers,
+                      onChanged: (value) {
+                        groupProvider.setApproveNewMembers(value: value);
+                        if (value) {
+                          groupProvider.setRequestToJoin(value: !value);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    // groupProvider.groupModel.approveMembers
+                    //     ?
+                  groupProvider.groupModel.isPrivate ? SettingsSwitchListTile(
+                            title: 'Request to Join',
+                            subtitle:
+                                'Request incoming members to join the group, before viewing group content',
+                            icon: Icons.request_page,
+                            containerColor: Colors.orange,
+                            value: groupProvider.groupModel.isPrivate ? groupProvider.groupModel.requestToJoing : false,
+                            onChanged: (value) {
+                              groupProvider.setRequestToJoin(value: value);
+                              if (value) {
+                                groupProvider.setApproveNewMembers(value: !value);
+                              }
+                            },
+                          ): const SizedBox.shrink(),
+                        // : const SizedBox.shrink(),
+                    const SizedBox(height: 10),
+                    SettingsSwitchListTile(
+                      title: 'Lock Messages',
+                      subtitle:
+                          'Only Admins can send messages, other members can only read messages',
+                      icon: Icons.lock,
+                      containerColor: Colors.deepPurple,
+                      value: groupProvider.groupModel.lockMessages,
+                      onChanged: (value) {
+                        groupProvider.setLockMessages(value: value);
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    Card(
+                      color:
+                          getAdminsContainerColor(groupProvider: groupProvider),
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 8.0, right: 8.0),
+                        child: SettingsListTile(
+                            title: 'Group Admins',
+                            subtitle: getGroupAdminsNames(
+                                groupProvider: groupProvider, uid: uid),
+                            icon: Icons.admin_panel_settings,
+                            iconContainerColor: Colors.red,
+                            onTap: () {
+                              // check if there are group members
+                              if (groupProvider.groupMembersList.isEmpty) {
+                                return;
+                              }
+                              groupProvider.setEmptyTemps();
+                              // show bottom sheet to select admins
+                              showBottomSheet(
+                                  context: context,
+                                  builder: (context) {
+                                    return SizedBox(
+                                      height: MediaQuery.of(context).size.height *
+                                          0.9,
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Column(
+                                          children: [
+                                            Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.spaceBetween,
+                                              children: [
+                                                const Text(
+                                                  'Select Group Admins',
+                                                  style: TextStyle(
+                                                    fontSize: 18,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                                TextButton(
+                                                  onPressed: () {
+                                                    groupProvider
+                                                        .updateGroupDataInFireStoreIfNeeded()
+                                                        .whenComplete(() {
+                                                      Navigator.pop(context);
+                                                    });
+                                                  },
+                                                  child: const Text(
+                                                    'Done',
+                                                    style: TextStyle(
+                                                        color: Colors.blue,
+                                                        fontSize: 18,
+                                                        fontWeight:
+                                                            FontWeight.bold),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 10),
+                                            Expanded(
+                                              child: ListView.builder(
+                                                itemCount: groupProvider
+                                                    .groupMembersList.length,
+                                                itemBuilder: (context, index) {
+                                                  final friend = groupProvider
+                                                      .groupMembersList[index];
+                                                  return FriendWidget(
+                                                    friend: friend,
+                                                    viewType:
+                                                        FriendViewType.groupView,
+                                                    isAdminView: true,
+                                                  );
+                                                },
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  });
+                            }),
+                      ),
+                    )
+                  ],
+                ),
               ),
             );
           },

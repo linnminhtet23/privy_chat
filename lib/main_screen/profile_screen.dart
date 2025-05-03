@@ -2,6 +2,7 @@ import 'package:adaptive_theme/adaptive_theme.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:privy_chat/constants.dart';
+import 'package:privy_chat/main_screen/help_screen.dart';
 import 'package:privy_chat/models/user_model.dart';
 import 'package:privy_chat/utilities/global_methods.dart';
 import 'package:privy_chat/widgets/my_app_bar.dart';
@@ -9,7 +10,7 @@ import 'package:privy_chat/widgets/info_details_card.dart';
 import 'package:privy_chat/widgets/settings_list_tile.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:open_settings/open_settings.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../providers/authentication_provider.dart';
 
@@ -45,6 +46,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     getThemeMode();
     super.initState();
+  }
+
+  Future<void> shareApp() async {
+    const String appLink = 'https://privychat.app'; // Replace with your app's actual link
+    const String message = 'Check out PrivyChat - A secure messaging app for private conversations! Download now: ';
+    
+    try {
+      await Share.share('$message$appLink');
+    } catch (e) {
+      debugPrint('Error sharing app: $e');
+    }
   }
 
   @override
@@ -117,38 +129,38 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     ),
                                   ),
                                   const SizedBox(height: 10),
-                                  Card(
-                                    child: Column(
-                                      children: [
-                                        SettingsListTile(
-                                          title: 'Account',
-                                          icon: Icons.person,
-                                          iconContainerColor: Colors.deepPurple,
-                                          onTap: () {
-                                            // navigate to account settings
-                                          },
-                                        ),
-                                        SettingsListTile(
-                                          title: 'My Media',
-                                          icon: Icons.image,
-                                          iconContainerColor: Colors.green,
-                                          onTap: () {
-                                            // navigate to account settings
-                                          },
-                                        ),
-                                        SettingsListTile(
-                                          title: 'Notifications',
-                                          icon: Icons.notifications,
-                                          iconContainerColor: Colors.red,
-                                          onTap: () {
-                                            // navigate to account settings
-                                            OpenSettings
-                                                .openAppNotificationSetting();
-                                          },
-                                        ),
-                                      ],
-                                    ),
-                                  ),
+                                  // Card(
+                                  //   child: Column(
+                                  //     children: [
+                                  //       SettingsListTile(
+                                  //         title: 'Account',
+                                  //         icon: Icons.person,
+                                  //         iconContainerColor: Colors.deepPurple,
+                                  //         onTap: () {
+                                  //           // navigate to account settings
+                                  //         },
+                                  //       ),
+                                  //       SettingsListTile(
+                                  //         title: 'My Media',
+                                  //         icon: Icons.image,
+                                  //         iconContainerColor: Colors.green,
+                                  //         onTap: () {
+                                  //           // navigate to account settings
+                                  //         },
+                                  //       ),
+                                  //       SettingsListTile(
+                                  //         title: 'Notifications',
+                                  //         icon: Icons.notifications,
+                                  //         iconContainerColor: Colors.red,
+                                  //         onTap: () {
+                                  //           // navigate to account settings
+                                  //           OpenSettings
+                                  //               .openAppNotificationSetting();
+                                  //         },
+                                  //       ),
+                                  //     ],
+                                  //   ),
+                                  // ),
                                   const SizedBox(height: 10),
                                   Card(
                                     child: Column(
@@ -158,7 +170,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                           icon: Icons.help,
                                           iconContainerColor: Colors.yellow,
                                           onTap: () {
-                                            // navigate to account settings
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) => const HelpScreen(),
+                                              ),
+                                            );
                                           },
                                         ),
                                         SettingsListTile(
@@ -166,7 +183,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                           icon: Icons.share,
                                           iconContainerColor: Colors.blue,
                                           onTap: () {
+                                            print("hello");
                                             // navigate to account settings
+                                            shareApp();
                                           },
                                         ),
                                       ],

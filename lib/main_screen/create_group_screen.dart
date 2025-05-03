@@ -135,6 +135,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
     final rsaKeyPair = generateRSAKeyPair();
     final publicKey = encodePublicKeyToPem(rsaKeyPair.publicKey);
     final privateKey = encodePrivateKeyToPem(rsaKeyPair.privateKey);
+  print("group type ${GroupType}");
 
     GroupModel groupModel = GroupModel(
       creatorUID: uid,
@@ -156,8 +157,8 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
       membersUIDs: [],
       adminsUIDs: [],
       awaitingApprovalUIDs: [],
-        publicKey:publicKey,
-        privateKey: privateKey
+      publicKey:publicKey,
+      privateKey: privateKey
     );
 
     // create group
@@ -196,98 +197,99 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
           )
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(
-          vertical: 10.0,
-          horizontal: 10.0,
-        ),
-        child:
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                DisplayUserImage(
-                  finalFileImage: finalFileImage,
-                  radius: 60,
-                  onPressed: () {
-                    showBottomSheet();
-                  },
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            vertical: 10.0,
+            horizontal: 10.0,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  DisplayUserImage(
+                    finalFileImage: finalFileImage,
+                    radius: 60,
+                    onPressed: () {
+                      showBottomSheet();
+                    },
+                  ),
+                  const SizedBox(width: 10),
+                  buildGroupType(),
+                ],
+              ),
+              const SizedBox(height: 10),
+
+              // texField for group name
+              TextField(
+                controller: groupNameController,
+                maxLength: 25,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  hintText: 'Group Name',
+                  label: Text('Group Name'),
+                  counterText: '',
+                  border: OutlineInputBorder(),
                 ),
-                const SizedBox(width: 10),
-                buildGroupType(),
-              ],
-            ),
-            const SizedBox(height: 10),
-
-            // texField for group name
-            TextField(
-              controller: groupNameController,
-              maxLength: 25,
-              textInputAction: TextInputAction.next,
-              decoration: const InputDecoration(
-                hintText: 'Group Name',
-                label: Text('Group Name'),
-                counterText: '',
-                border: OutlineInputBorder(),
               ),
-            ),
-            const SizedBox(height: 10),
-            // textField for group description
-            TextField(
-              controller: groupDescriptionController,
-              maxLength: 100,
-              textInputAction: TextInputAction.done,
-              decoration: const InputDecoration(
-                hintText: 'Group Description',
-                label: Text('Group Description'),
-                counterText: '',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 10),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.only(
-                  left: 8.0,
-                  right: 8.0,
+              const SizedBox(height: 10),
+              // textField for group description
+              TextField(
+                controller: groupDescriptionController,
+                maxLength: 100,
+                textInputAction: TextInputAction.done,
+                decoration: const InputDecoration(
+                  hintText: 'Group Description',
+                  label: Text('Group Description'),
+                  counterText: '',
+                  border: OutlineInputBorder(),
                 ),
-                child: SettingsListTile(
-                    title: 'Group Settings',
-                    icon: Icons.settings,
-                    iconContainerColor: Colors.deepPurple,
-                    onTap: () {
-                      // navigate to group settings screen
-                      Navigator.pushNamed(
-                          context, Constants.groupSettingsScreen);
-                    }),
               ),
-            ),
-            const SizedBox(height: 10),
-            const Text(
-              'Select Group Members',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+              // const SizedBox(height: 10),
+              // Card(
+              //   child: Padding(
+              //     padding: const EdgeInsets.only(
+              //       left: 8.0,
+              //       right: 8.0,
+              //     ),
+              //     child: SettingsListTile(
+              //         title: 'Group Settings',
+              //         icon: Icons.settings,
+              //         iconContainerColor: Colors.deepPurple,
+              //         onTap: () {
+              //           // navigate to group settings screen
+              //           Navigator.pushNamed(
+              //               context, Constants.groupSettingsScreen);
+              //         }),
+              //   ),
+              // ),
+              const SizedBox(height: 10),
+              const Text(
+                'Select Group Members',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-            const SizedBox(height: 10),
+              const SizedBox(height: 10),
 
-            // cuppertino search bar
-            CupertinoSearchTextField(
-              onChanged: (value) {},
-            ),
-
-            const SizedBox(height: 10),
-
-            const Flexible(
-              fit: FlexFit.loose,
-              child: FriendsList(
-                viewType: FriendViewType.groupView,
+              // cuppertino search bar
+              CupertinoSearchTextField(
+                onChanged: (value) {},
               ),
-            ),
-          ],
+
+              const SizedBox(height: 10),
+
+              SizedBox(
+                height: MediaQuery.of(context).size.height * 0.4,
+                child: const FriendsList(
+                  viewType: FriendViewType.groupView,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

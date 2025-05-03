@@ -130,10 +130,12 @@ Center buildDateTime(groupedByValue) {
 Widget messageToShow({required MessageEnum type, required String message}) {
   switch (type) {
     case MessageEnum.text:
-      return Text(
-        message,
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
+      return Expanded(
+        child: Text(
+          message,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
       );
     case MessageEnum.image:
       return const Row(

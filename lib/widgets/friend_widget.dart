@@ -52,6 +52,7 @@ class FriendWidget extends StatelessWidget {
                       .read<AuthenticationProvider>()
                       .acceptFriendRequest(friendID: friend.uid)
                       .whenComplete(() {
+                                            Navigator.pop(context);
                     showSnackBar(
                         context, 'You are now friends with ${friend.name}');
                   });

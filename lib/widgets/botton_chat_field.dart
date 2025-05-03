@@ -364,52 +364,58 @@ class _BottomChatFieldState extends State<BottomChatField> {
 
   Widget buildLoackedMessages() {
     final uid = context.read<AuthenticationProvider>().userModel!.uid;
-    print("userId $uid");
-
-    final groupProvider = context.read<GroupProvider>();
-    // check if is admin
-    final isAdmin = groupProvider.groupModel.adminsUIDs.contains(uid);
-
-    // chec if is member
-    final isMember = groupProvider.groupModel.membersUIDs.contains(uid);
-    print("groupModel ${groupProvider.groupModel.membersUIDs}");
-
-    print("isMember $isMember");
-
-    // check is messages are locked
-    final isLocked = groupProvider.groupModel.lockMessages;
-    return isAdmin
-        ? buildBottomChatField()
-        : isMember
-            ? buildisMember(isLocked)
-            : SizedBox(
-                height: 60,
-                child: Center(
-                  child: TextButton(
-                    onPressed: () async {
-                      // send request to join group
-                      await groupProvider
-                          .sendRequestToJoinGroup(
-                        groupId: groupProvider.groupModel.groupId,
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('groups')
+          .doc(widget.groupId)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const SizedBox.shrink();
+        }
+        
+        final groupData = snapshot.data!.data() as Map<String, dynamic>;
+        final adminsUIDs = List<String>.from(groupData['adminsUIDs'] ?? []);
+        final membersUIDs = List<String>.from(groupData['membersUIDs'] ?? []);
+        final isLocked = groupData['lockMessages'] ?? false;
+        
+        final isAdmin = adminsUIDs.contains(uid);
+        final isMember = membersUIDs.contains(uid);
+        
+        if (isAdmin) {
+          return buildBottomChatField();
+        } else if (isMember) {
+          return buildisMember(isLocked);
+        } else {
+          return SizedBox(
+            height: 60,
+            child: Center(
+              child: TextButton(
+                onPressed: () async {
+                  await context.read<GroupProvider>()
+                      .sendRequestToJoinGroup(
+                        groupId: widget.groupId,
                         uid: uid,
-                        groupName: groupProvider.groupModel.groupName,
-                        groupImage: groupProvider.groupModel.groupImage,
+                        groupName: groupData['groupName'],
+                        groupImage: groupData['groupImage'],
                       )
-                          .whenComplete(() {
-                        showSnackBar(context, 'Request sent');
-                      });
-                      print('request to join group');
-                    },
-                    child: const Text(
-                      'You are not a member of this group, \n click here to send request to join',
-                      style: TextStyle(
-                        color: Colors.red,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                      .whenComplete(() {
+                    showSnackBar(context, 'Request sent');
+                  });
+                },
+                child: const Text(
+                  'You are not a member of this group, \n click here to send request to join',
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-              );
+              ),
+            ),
+          );
+        }
+      },
+    );
   }
 
   buildisMember(bool isLocked) {

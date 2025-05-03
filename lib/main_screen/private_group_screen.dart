@@ -4,12 +4,10 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:privy_chat/constants.dart';
 import 'package:privy_chat/models/group_model.dart';
-import 'package:privy_chat/providers/authentication_provider_unused.dart';
+import 'package:privy_chat/providers/authentication_provider.dart';
 import 'package:privy_chat/providers/group_provider.dart';
 import 'package:privy_chat/widgets/chat_widget.dart';
 import 'package:provider/provider.dart';
-
-import '../providers/authentication_provider.dart';
 
 class PrivateGroupScreen extends StatefulWidget {
   const PrivateGroupScreen({super.key});
@@ -33,7 +31,7 @@ class _PrivateGroupScreenState extends State<PrivateGroupScreen> {
   void _onSearchChanged(String query) {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 500), () {
-      setState(() => searchQuery = query);
+      setState(() => searchQuery = query.trim());
     });
   }
 
@@ -57,64 +55,105 @@ class _PrivateGroupScreenState extends State<PrivateGroupScreen> {
             ),
           ),
           Expanded(
-            child: MyPrivateGroups(uid: uid, searchQuery: searchQuery),
+            child: searchQuery.isNotEmpty
+                ? StreamBuilder<List<GroupModel>>(
+                    stream: context.read<GroupProvider>().getAllPrivateGroupsStream(
+                      searchQuery: searchQuery,
+                    ),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (snapshot.hasError) {
+                        return const Center(child: Text('Something went wrong'));
+                      }
+                      if (snapshot.data == null || snapshot.data!.isEmpty) {
+                        return const Center(child: Text('No private groups Found'));
+                      }
+
+                      final groups = snapshot.data!;
+                      return ListView.builder(
+                        itemCount: groups.length,
+                        itemBuilder: (context, index) {
+                          final groupModel = groups[index];
+                          return 
+                          ChatWidget(
+                            group: groupModel,
+                            isGroup: true,
+                            onTap: () => _navigateToGroupChat(context, groupModel),
+                          );
+                        },
+                      );
+                    },
+                  )
+                : StreamBuilder<List<GroupModel>>(
+                    stream: context.read<GroupProvider>().getPrivateGroupsStream(
+                      userId: uid,
+                    ),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (snapshot.hasError) {
+                        return const Center(child: Text('Something went wrong'));
+                      }
+                      if (snapshot.data == null || snapshot.data!.isEmpty) {
+                        return const Center(child: Text('No groups found'));
+                      }
+
+                      final groups = snapshot.data!;
+                      return ListView.builder(
+                        itemCount: groups.length,
+                        itemBuilder: (context, index) {
+                          final groupModel = groups[index];
+                          return Stack(
+                            children: [
+                              ChatWidget(
+                                group: groupModel,
+                                isGroup: true,
+                                onTap: () => _navigateToGroupChat(context, groupModel),
+                              ),
+                              if (groupModel.adminsUIDs.contains(uid) && 
+                                  groupModel.awaitingApprovalUIDs.isNotEmpty)
+                                // Positioned(
+                                //   top: 8,
+                                //   right: 8,
+                                //   child: GestureDetector(
+                                //     onTap: () => Navigator.push(
+                                //       context,
+                                //       MaterialPageRoute(
+                                //         builder: (context) => PendingRequestsScreen(
+                                //           groupId: groupModel.groupId,
+                                //         ),
+                                //       ),
+                                //     ),
+                                //     child:
+                                     Container(
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(context).colorScheme.primary,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Text(
+                                        groupModel.awaitingApprovalUIDs.length.toString(),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  // )
+                                // ),
+                            ],
+                          );
+                        },
+                      );
+                    },
+                  ),
           ),
         ],
       ),
-    );
-  }
-}
-
-class MyPrivateGroups extends StatelessWidget {
-  const MyPrivateGroups({
-    super.key,
-    required this.uid,
-    required this.searchQuery,
-  });
-
-  final String uid;
-  final String searchQuery;
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<List<GroupModel>>(
-      stream: context.read<GroupProvider>().getPrivateGroupsStream(userId: uid),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snapshot.hasError) {
-          return const Center(child: Text('Something went wrong'));
-        }
-        if (snapshot.data!.isEmpty) {
-          return const Center(child: Text('No private groups'));
-        }
-
-        final groups = snapshot.data!;
-        final filteredGroups = searchQuery.isEmpty
-            ? groups
-            : groups
-                .where((group) => group.groupName
-                    .toLowerCase()
-                    .contains(searchQuery.toLowerCase()))
-                .toList();
-
-        if (filteredGroups.isEmpty) {
-          return const Center(child: Text('No group found'));
-        }
-
-        return ListView.builder(
-          itemCount: filteredGroups.length,
-          itemBuilder: (context, index) {
-            final groupModel = filteredGroups[index];
-            return ChatWidget(
-              group: groupModel,
-              isGroup: true,
-              onTap: () => _navigateToGroupChat(context, groupModel),
-            );
-          },
-        );
-      },
     );
   }
 

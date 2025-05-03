@@ -1,6 +1,5 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:privy_chat/providers/authentication_provider_unused.dart';
 import 'package:privy_chat/streams/all_people_search_stream.dart';
 import 'package:provider/provider.dart';
 
@@ -15,6 +14,14 @@ class PeopleScreen extends StatefulWidget {
 
 class _PeopleScreenState extends State<PeopleScreen> {
   String searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentUser = context.read<AuthenticationProvider>().userModel!;
@@ -26,9 +33,14 @@ class _PeopleScreenState extends State<PeopleScreen> {
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: CupertinoSearchTextField(
+              controller: _searchController,
               placeholder: 'Search',
+              prefixIcon: const Icon(CupertinoIcons.search),
+              suffixMode: OverlayVisibilityMode.editing,
+              suffixIcon: const Icon(CupertinoIcons.clear_circled_solid),
               onChanged: (value) => setState(() => searchQuery = value),
               onSuffixTap: () {
+                _searchController.clear();
                 setState(() => searchQuery = '');
                 FocusScope.of(context).unfocus();
               },

@@ -63,6 +63,7 @@ class InfoDetailsCard extends StatelessWidget {
                 content: content,
                 textAction: "Change",
                 onActionTap: (value, updatedText) async {
+                  print("this is content $content");
                   if (value) {
                     if (content == Constants.changeName) {
                       final name = await authProvider.updateName(
@@ -84,7 +85,7 @@ class InfoDetailsCard extends StatelessWidget {
                       );
                       if (isGroup) {
                         if (desc == 'Invalid description.') return;
-                        groupProvider!.setGroupName(desc);
+                        groupProvider!.setGroupDescription(desc);
                       }
                     }
                   }

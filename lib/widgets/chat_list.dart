@@ -176,16 +176,23 @@ class _ChatListState extends State<ChatList> {
 
   void sendReactionToMessage(
       {required String reaction, required String messageId}) {
-    // get the sender uid
-    final senderUID = context.read<AuthenticationProvider>().userModel!.uid;
-
-    context.read<ChatProvider>().sendReactionToMessage(
-      senderUID: senderUID,
-      contactUID: widget.contactUID,
-      messageId: messageId,
-      reaction: reaction,
-      groupId: widget.groupId.isNotEmpty,
-    );
+    // if (!mounted) return;
+    
+    // try {
+      final senderUID = context.read<AuthenticationProvider>().userModel!.uid;
+      
+      context.read<ChatProvider>().sendReactionToMessage(
+        senderUID: senderUID,
+        contactUID: widget.contactUID,
+        messageId: messageId,
+        reaction: reaction,
+        groupId: widget.groupId.isNotEmpty,
+      );
+    // } catch (e) {
+    //   if (mounted) {
+    //     showSnackBar(context, 'Failed to send reaction: $e');
+    //   }
+    // }
   }
 
   void showEmojiContainer({required String messageId}) {

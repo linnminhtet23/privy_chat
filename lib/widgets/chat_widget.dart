@@ -1,14 +1,11 @@
 import 'package:date_format/date_format.dart';
 import 'package:flutter/material.dart';
-import 'package:lottie/lottie.dart';
 import 'package:privy_chat/models/group_model.dart';
 import 'package:privy_chat/models/last_message_model.dart';
-import 'package:privy_chat/utilities/assets_manager.dart';
 import 'package:privy_chat/utilities/global_methods.dart';
 import 'package:privy_chat/widgets/unread_message_counter.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:privy_chat/utilities/assets_manager.dart';
 
 
 import '../providers/authentication_provider.dart';
@@ -57,7 +54,7 @@ class ChatWidget extends StatelessWidget {
             radius: 40,
             onTap: () {},
           ),
-          StreamBuilder<DocumentSnapshot>(
+          isGroup ? SizedBox.shrink() : StreamBuilder<DocumentSnapshot>(
             stream: FirebaseFirestore.instance
                 .collection('users')
                 .doc(contactUID)
@@ -92,22 +89,22 @@ class ChatWidget extends StatelessWidget {
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasData && snapshot.data!.exists) {
-            final isTyping = snapshot.data!.get('isTyping') ?? false;
-            final typingInChatRoom = snapshot.data!.get('typingInChatRoom') ?? '';
-            if (isTyping && typingInChatRoom == uid) {
-              return Row(
-                children: [
-                  SizedBox(
-                    height: 32,
-                    width: 32,
-                    child: Lottie.asset(
-                      AssetsMenager.typingIndicator,
-                      fit: BoxFit.contain,
-                    ),
-                  ),
-                ],
-              );
-            }
+            // final isTyping = snapshot.data!.get('isTyping') ?? false;
+            // final typingInChatRoom = snapshot.data!.get('typingInChatRoom') ?? '';
+            // if (isTyping && typingInChatRoom == uid) {
+            //   return Row(
+            //     children: [
+            //       SizedBox(
+            //         height: 32,
+            //         width: 32,
+            //         child: Lottie.asset(
+            //           AssetsMenager.typingIndicator,
+            //           fit: BoxFit.contain,
+            //         ),
+            //       ),
+            //     ],
+            //   );
+            // }
             return Row(
               children: [
                 // Container(
@@ -152,10 +149,11 @@ class ChatWidget extends StatelessWidget {
       ) : Row(
         children: [
           uid == senderUID
-              ? const Text(
-                  'You:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                )
+              ? Text(
+    'You:',
+    style: TextStyle(fontWeight: FontWeight.bold),
+    overflow: TextOverflow.ellipsis,
+  )
               : const SizedBox(),
           const SizedBox(width: 5),
           messageToShow(

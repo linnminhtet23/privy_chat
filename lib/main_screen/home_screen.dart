@@ -269,39 +269,31 @@ class _HomeScreenState extends State<HomeScreen>
               )
             : null,
         bottomNavigationBar: BottomNavigationBar(
-          // items: const [
-          //   BottomNavigationBarItem(
-          //     icon: Icon(CupertinoIcons.chat_bubble_2),
-          //     label: 'Chats',
-          //   ),
-          //   BottomNavigationBarItem(
-          //     icon: Icon(CupertinoIcons.group),
-          //     label: 'Groups',
-          //   ),
-          //   BottomNavigationBarItem(
-          //     icon: Icon(CupertinoIcons.globe),
-          //     label: 'People',
-          //   ),
-          // ],
           items: [
             BottomNavigationBarItem(
-              icon: _buildBadge(
-                icon: CupertinoIcons.chat_bubble_2,
-                badgeCount: chatBadgeCount,
+              icon: Icon(
+                currentIndex == 0 
+                    ? CupertinoIcons.chat_bubble_2_fill 
+                    : CupertinoIcons.chat_bubble_2,
+                size: 24
               ),
               label: 'Chats',
             ),
             BottomNavigationBarItem(
-              icon: _buildBadge(
-                icon: CupertinoIcons.group,
-                badgeCount: groupBadgeCount,
+              icon: Icon(
+                currentIndex == 1 
+                    ? CupertinoIcons.group_solid 
+                    : CupertinoIcons.group,
+                size: 24
               ),
               label: 'Groups',
             ),
             BottomNavigationBarItem(
-              icon: _buildBadge(
-                icon: CupertinoIcons.globe,
-                badgeCount: peopleBadgeCount,
+              icon: Icon(
+                currentIndex == 2 
+                    ? CupertinoIcons.person_2_fill 
+                    : CupertinoIcons.person_2,
+                size: 24
               ),
               label: 'People',
             ),

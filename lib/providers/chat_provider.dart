@@ -37,6 +37,49 @@ class ChatProvider extends ChangeNotifier {
   bool get isTyping => _isTyping;
   String get typingUserId => _typingUserId;
 
+  // Update typing status for group chat
+  Future<void> updateGroupTypingStatus({
+    required String groupId,
+    required String userId,
+    required bool isTyping,
+  }) async {
+    try {
+      if (_typingTimer?.isActive ?? false) {
+        _typingTimer!.cancel();
+      }
+
+      // Update typing status in Firestore
+      await _firestore
+          .collection(Constants.groups)
+          .doc(groupId)
+          .collection('typing')
+          .doc(userId)
+          .set({
+        'isTyping': isTyping,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+
+      if (isTyping) {
+        // Start a timer to automatically set typing to false after duration
+        _typingTimer = Timer(_typingDuration, () async {
+          await _firestore
+              .collection(Constants.groups)
+              .doc(groupId)
+              .collection('typing')
+              .doc(userId)
+              .delete();
+        });
+      }
+
+      // Update local state
+      _isTyping = isTyping;
+      _typingUserId = userId;
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error updating group typing status: $e');
+    }
+  }
+
 
   void setSearchQuery(String value) {
     _searchQuery = value;
@@ -806,13 +849,14 @@ class ChatProvider extends ChangeNotifier {
     String reactionToAdd = '$senderUID=$reaction';
 
     // Get the sender's information for notification
-    // final senderDoc = await _firestore.collection('users').doc(senderUID).get();
-    // final senderName = senderDoc.data()?['name'] ?? 'Someone';
+    final senderDoc = await _firestore.collection('users').doc(senderUID).get();
+    final senderName = senderDoc.data()?['name'] ?? 'Someone';
 
 
     try {
       // 1. check if its a group message
       if (groupId) {
+        print("inside the group reaction");
         // 2. get the reaction list from firestore
         final messageData = await _firestore
             .collection(Constants.groups)
@@ -859,24 +903,24 @@ class ChatProvider extends ChangeNotifier {
               .update({Constants.reactions: message.reactions});
 
           // Send notification to message sender if they're not the one reacting
-          // if (message.senderUID != senderUID) {
-          //   final groupDoc = await _firestore.collection(Constants.groups).doc(contactUID).get();
-          //   final groupName = groupDoc.data()?['groupName'] ?? 'Group';
-          //   final senderFCMToken = (await _firestore.collection('users').doc(message.senderUID).get()).data()?['token'];
-          //
-          //   if (senderFCMToken != null) {
-          //     await sendNotification(
-          //       token: senderFCMToken,
-          //       title: groupName,
-          //       body: '$senderName reacted with $reaction to your message',
-          //       data: {
-          //         'notificationType': Constants.groupChatNotification,
-          //         'groupId': contactUID,
-          //         'messageId': messageId
-          //       },
-          //     );
-          //   }
-          // }
+          if (message.senderUID != senderUID) {
+            final groupDoc = await _firestore.collection(Constants.groups).doc(contactUID).get();
+            final groupName = groupDoc.data()?['groupName'] ?? 'Group';
+            final senderFCMToken = (await _firestore.collection('users').doc(message.senderUID).get()).data()?['token'];
+          
+            if (senderFCMToken != null) {
+              await sendNotification(
+                token: senderFCMToken,
+                title: groupName,
+                body: '$senderName reacted with $reaction to your message',
+                data: {
+                  'notificationType': Constants.groupChatNotification,
+                  'groupId': contactUID,
+                  'messageId': messageId
+                },
+              );
+            }
+          }
           await _firestore
               .collection(Constants.groups)
               .doc(contactUID)
@@ -948,23 +992,23 @@ class ChatProvider extends ChangeNotifier {
               .update({Constants.reactions: message.reactions});
 
           // Send notification to message sender if they're not the one reacting
-          // if (message.senderUID != senderUID) {
-          //   final contactFCMToken = (await _firestore.collection('users').doc(message.senderUID).get()).data()?['token'];
-          //
-          //   if (contactFCMToken != null) {
-          //     await sendNotification(
-          //       token: contactFCMToken,
-          //       title: senderName,
-          //       body: 'reacted with $reaction to your message',
-          //       data: {
-          //         'notificationType': Constants.chatNotification,
-          //         'contactUID': senderUID,
-          //         'contactName': senderName,
-          //         'messageId': messageId
-          //       },
-          //     );
-          //   }
-          // }
+          if (message.senderUID != senderUID) {
+            final contactFCMToken = (await _firestore.collection('users').doc(message.senderUID).get()).data()?['token'];
+          
+            if (contactFCMToken != null) {
+              await sendNotification(
+                token: contactFCMToken,
+                title: senderName,
+                body: 'reacted with $reaction to your message',
+                data: {
+                  'notificationType': Constants.chatNotification,
+                  'contactUID': senderUID,
+                  'contactName': senderName,
+                  'messageId': messageId
+                },
+              );
+            }
+          }
         }
       }
 
@@ -1648,25 +1692,25 @@ class ChatProvider extends ChangeNotifier {
       });
   }
 
-  Future<void> updateGroupTypingStatus({
-  required String groupId,
-  required String userId,
-  required bool isTyping,
-}) async {
-  try {
-    if (isTyping) {
-      await _firestore.collection('groups').doc(groupId).update({
-        'typingUsers': FieldValue.arrayUnion([userId]),
-      });
-    } else {
-      await _firestore.collection('groups').doc(groupId).update({
-        'typingUsers': FieldValue.arrayRemove([userId]),
-      });
-    }
-  } catch (e) {
-    print('Error updating group typing status: $e');
-  }
-}
+//   Future<void> updateGroupTypingStatus({
+//   required String groupId,
+//   required String userId,
+//   required bool isTyping,
+// }) async {
+//   try {
+//     if (isTyping) {
+//       await _firestore.collection('groups').doc(groupId).update({
+//         'typingUsers': FieldValue.arrayUnion([userId]),
+//       });
+//     } else {
+//       await _firestore.collection('groups').doc(groupId).update({
+//         'typingUsers': FieldValue.arrayRemove([userId]),
+//       });
+//     }
+//   } catch (e) {
+//     print('Error updating group typing status: $e');
+//   }
+// }
 
 // Listen for group typing status
 void listenForGroupTypingStatus(String groupId) {

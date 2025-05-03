@@ -126,6 +126,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             password: _passwordController.text.trim(),
                             context: context,
                             onSuccess: () async{
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text("Login Success")),
+                              );
                               // Navigate to the home screen or show success message
                               Navigator.pushNamedAndRemoveUntil(
                                 context,

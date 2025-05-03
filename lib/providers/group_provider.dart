@@ -65,9 +65,101 @@ class GroupProvider extends ChangeNotifier {
   GroupModel get groupModel => _groupModel;
   List<UserModel> get groupMembersList => _groupMembersList;
   List<UserModel> get groupAdminsList => _groupAdminsList;
+  
+  Stream<List<String>> getAwaitingApprovalStream() {
+    return _firestore
+        .collection(Constants.groups)
+        .doc(_groupModel.groupId)
+        .snapshots()
+        .map((snapshot) {
+          if (!snapshot.exists) return [];
+          final data = snapshot.data()!;
+          return List<String>.from(data[Constants.awaitingApprovalUIDs] ?? []);
+        });
+  }
 
   // firebase initialization
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  // Request to join group
+  Future<void> requestToJoinGroup({required String groupId, required String userId}) async {
+    try {
+      final groupDoc = await _firestore.collection(Constants.groups).doc(groupId).get();
+      if (!groupDoc.exists) return;
+
+      final groupData = groupDoc.data()!;
+      final List<String> awaitingApprovalUIDs = List<String>.from(groupData[Constants.awaitingApprovalUIDs] ?? []);
+      
+      if (!awaitingApprovalUIDs.contains(userId)) {
+        awaitingApprovalUIDs.add(userId);
+        await _firestore.collection(Constants.groups).doc(groupId).update({
+          Constants.awaitingApprovalUIDs: awaitingApprovalUIDs,
+        });
+
+        // Notify group admins
+        final List<String> adminsUIDs = List<String>.from(groupData[Constants.adminsUIDs] ?? []);
+        for (final adminId in adminsUIDs) {
+          await _firestore.collection('notifications').add({
+            'type': 'group_join_request',
+            'groupId': groupId,
+            'userId': userId,
+            'adminId': adminId,
+            'timestamp': DateTime.now().millisecondsSinceEpoch,
+            'isRead': false,
+          });
+        }
+      }
+    } catch (e) {
+      print('Error requesting to join group: ${e.toString()}');
+    }
+  }
+
+  // Approve join request
+  Future<void> approveJoinRequest({required String groupId, required String userId}) async {
+    try {
+      final groupDoc = await _firestore.collection(Constants.groups).doc(groupId).get();
+      if (!groupDoc.exists) return;
+
+      final groupData = groupDoc.data()!;
+      final List<String> awaitingApprovalUIDs = List<String>.from(groupData[Constants.awaitingApprovalUIDs] ?? []);
+      final List<String> membersUIDs = List<String>.from(groupData[Constants.membersUIDs] ?? []);
+
+      if (awaitingApprovalUIDs.contains(userId)) {
+        awaitingApprovalUIDs.remove(userId);
+        membersUIDs.add(userId);
+
+        await _firestore.collection(Constants.groups).doc(groupId).update({
+          Constants.awaitingApprovalUIDs: awaitingApprovalUIDs,
+          Constants.membersUIDs: membersUIDs,
+        });
+      }
+    } catch (e) {
+      print('Error approving join request: ${e.toString()}');
+      throw e;
+    }
+  }
+
+  // Reject join request
+  Future<void> rejectJoinRequest({required String groupId, required String userId}) async {
+    try {
+      final groupDoc = await _firestore.collection(Constants.groups).doc(groupId).get();
+      if (!groupDoc.exists) return;
+
+      final groupData = groupDoc.data()!;
+      final List<String> awaitingApprovalUIDs = List<String>.from(groupData[Constants.awaitingApprovalUIDs] ?? []);
+
+      if (awaitingApprovalUIDs.contains(userId)) {
+        awaitingApprovalUIDs.remove(userId);
+
+        await _firestore.collection(Constants.groups).doc(groupId).update({
+          Constants.awaitingApprovalUIDs: awaitingApprovalUIDs,
+        });
+      }
+    } catch (e) {
+      print('Error rejecting join request: ${e.toString()}');
+      throw e;
+    }
+  }
 
   // setters
   void setIsSloading({required bool value}) {
@@ -468,20 +560,58 @@ class GroupProvider extends ChangeNotifier {
             event.docs.map((doc) => GroupModel.fromMap(doc.data())).toList());
   }
 
-  // get a stream all public groups that contains the our userId
-  Stream<List<GroupModel>> getPublicGroupsStream({required String userId}) {
+  Stream<List<GroupModel>> getAllPrivateGroupsStream({required String searchQuery}) {
+    return _firestore
+        .collection(Constants.groups)
+        .where(Constants.isPrivate, isEqualTo: true)
+        .snapshots()
+        .map((event) {
+          final allGroups = event.docs.map((doc) => GroupModel.fromMap(doc.data())).toList();
+          if (searchQuery.isEmpty) return allGroups;
+          
+          return allGroups.where((group) =>
+              group.groupName.toLowerCase().contains(searchQuery.toLowerCase()))
+              .toList();
+        });
+  }
+  Stream<List<GroupModel>> getAllPublicGroupsStream({required String searchQuery}) {
     return _firestore
         .collection(Constants.groups)
         .where(Constants.isPrivate, isEqualTo: false)
         .snapshots()
-        .asyncMap((event) {
-      List<GroupModel> groups = [];
-      for (var group in event.docs) {
-        groups.add(GroupModel.fromMap(group.data()));
-      }
+        .map((event) {
+          final allGroups = event.docs.map((doc) => GroupModel.fromMap(doc.data())).toList();
+          if (searchQuery.isEmpty) return allGroups;
+          
+          return allGroups.where((group) =>
+              group.groupName.toLowerCase().contains(searchQuery.toLowerCase()))
+              .toList();
+        });
+  }
 
-      return groups;
-    });
+  // get a stream all public groups that contains the our userId
+  // Stream<List<GroupModel>> getPublicGroupsStream({required String userId}) {
+  //   return _firestore
+  //       .collection(Constants.groups)
+  //       .where(Constants.isPrivate, isEqualTo: false)
+  //       .snapshots()
+  //       .asyncMap((event) {
+  //     List<GroupModel> groups = [];
+  //     for (var group in event.docs) {
+  //       groups.add(GroupModel.fromMap(group.data()));
+  //     }
+
+  //     return groups;
+  //   });
+  // }
+  Stream<List<GroupModel>> getPublicGroupsStream({required String userId}) {
+    return _firestore
+        .collection(Constants.groups)
+        .where(Constants.membersUIDs, arrayContains: userId)
+        .where(Constants.isPrivate, isEqualTo: false)
+        .snapshots()
+        .map((event) =>
+            event.docs.map((doc) => GroupModel.fromMap(doc.data())).toList());
   }
 
   // change group type
@@ -517,6 +647,9 @@ class GroupProvider extends ChangeNotifier {
 
     _groupModel.awaitingApprovalUIDs.remove(friendID);
     _groupModel.membersUIDs.add(friendID);
+    
+    // Update group members list in real-time
+    await updateGroupMembersList();
     notifyListeners();
   }
 
@@ -537,6 +670,8 @@ class GroupProvider extends ChangeNotifier {
   }) async {
     // check if the user is the admin of the group
     bool isAdmin = _groupModel.adminsUIDs.contains(uid);
+    print("isAdmin $isAdmin");
+    print("uid $uid");
 
     await _firestore
         .collection(Constants.groups)

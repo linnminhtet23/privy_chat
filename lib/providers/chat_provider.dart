@@ -1534,17 +1534,29 @@ class ChatProvider extends ChangeNotifier {
         return;
       }
 
-      // 3. update the contact message as deleted
-      await _firestore
-          .collection(Constants.users)
-          .doc(contactUID)
-          .collection(Constants.chats)
-          .doc(currentUserId)
-          .collection(Constants.messages)
-          .doc(messageId)
-          .update({
-        Constants.deletedBy: FieldValue.arrayUnion([currentUserId])
-      });
+      // 3. update both current user and contact messages as deleted for everyone
+      await Future.wait([
+        _firestore
+            .collection(Constants.users)
+            .doc(currentUserId)
+            .collection(Constants.chats)
+            .doc(contactUID)
+            .collection(Constants.messages)
+            .doc(messageId)
+            .update({
+          Constants.deletedBy: FieldValue.arrayUnion([currentUserId, contactUID])
+        }),
+        _firestore
+            .collection(Constants.users)
+            .doc(contactUID)
+            .collection(Constants.chats)
+            .doc(currentUserId)
+            .collection(Constants.messages)
+            .doc(messageId)
+            .update({
+          Constants.deletedBy: FieldValue.arrayUnion([currentUserId, contactUID])
+        })
+      ]);
 
       // 4. delete the file from storage
       if (messageType != MessageEnum.text.name) {

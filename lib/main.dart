@@ -40,18 +40,18 @@ import 'screens/onboarding_screen.dart';
 // }
 
 // Global variable to track first-time app launch
-bool isFirstTime = true;
+// bool isFirstTime = true;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   // Initialize SharedPreferences
-  final prefs = await SharedPreferences.getInstance();
-  isFirstTime = prefs.getBool('isFirstTime') ?? true;
-  
-  if (isFirstTime) {
-    await prefs.setBool('isFirstTime', false);
-  }
+  // final prefs = await SharedPreferences.getInstance();
+  // isFirstTime = prefs.getBool('isFirstTime') ?? true;
+  //
+  // if (isFirstTime) {
+  //   await prefs.setBool('isFirstTime', false);
+  // }
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
@@ -100,9 +100,9 @@ class MyApp extends StatelessWidget {
         title: 'Privy Chat',
         theme: theme,
         darkTheme: darkTheme,
-        initialRoute: isFirstTime ? '/' : Constants.landingScreen, // Show onboarding for first time users
+        initialRoute: Constants.landingScreen, // Show onboarding for first time users
         routes: {
-          '/': (context) => const OnboardingScreen(),
+          // '/': (context) => const OnboardingScreen(),
           Constants.landingScreen: (context) => const LandingScreen(),
           Constants.loginScreen: (context) => const LoginScreen(),
           Constants.registerScreen: (context) => const RegisterScreen(),

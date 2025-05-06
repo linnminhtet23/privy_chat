@@ -2,7 +2,9 @@ import 'package:adaptive_theme/adaptive_theme.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:privy_chat/constants.dart';
+import 'package:privy_chat/main_screen/faq_screen.dart';
 import 'package:privy_chat/main_screen/help_screen.dart';
+import 'package:privy_chat/main_screen/privacy_security_screen.dart';
 import 'package:privy_chat/models/user_model.dart';
 import 'package:privy_chat/utilities/global_methods.dart';
 import 'package:privy_chat/widgets/my_app_bar.dart';
@@ -49,7 +51,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> shareApp() async {
-    const String appLink = 'https://privychat.app'; // Replace with your app's actual link
+    const String appLink = 'https://drive.google.com/drive/u/1/folders/1QO7E5T_k8byy18BwONAyv6_94W0aXR4l'; // Replace with your app's actual link
     const String message = 'Check out PrivyChat - A secure messaging app for private conversations! Download now: ';
     
     try {
@@ -183,11 +185,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                           icon: Icons.share,
                                           iconContainerColor: Colors.blue,
                                           onTap: () {
-                                            print("hello");
                                             // navigate to account settings
                                             shareApp();
                                           },
                                         ),
+                                        SettingsListTile(
+                                          title: 'FAQ',
+                                          icon: Icons.help,
+                                          iconContainerColor: Colors.brown,
+                                          onTap: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) => const FAQScreen(),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                        // SettingsListTile(
+                                        //   title: 'Privacy & Security',
+                                        //   icon: Icons.privacy_tip,
+                                        //   iconContainerColor: Colors.deepPurple,
+                                        //   onTap: () {
+                                        //     Navigator.push(
+                                        //       context,
+                                        //       MaterialPageRoute(
+                                        //         builder: (context) => const PrivacySecurityScreen(),
+                                        //       ),
+                                        //     );
+                                        //   },
+                                        // ),
                                       ],
                                     ),
                                   ),

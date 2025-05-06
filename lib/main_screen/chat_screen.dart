@@ -54,17 +54,17 @@ class _ChatScreenState extends State<ChatScreen> {
                   .doc(groupId)
                   .snapshots(),
               builder: (context, snapshot) {
-                // if (snapshot.hasError) {
-                //   return const Center(child: Text('Something went wrong'));
-                // }
-
+                if (snapshot.hasError) {
+                  return const Center(child: Text('Something went wrong'));
+                }
+                //
                 // if (snapshot.connectionState == ConnectionState.waiting) {
                 //   return const Center(child: CircularProgressIndicator());
                 // }
-
-                // if (!snapshot.hasData || !snapshot.data!.exists) {
-                //   return const Center(child: Text('Group not found'));
-                // }
+                //
+                if (!snapshot.hasData || !snapshot.data!.exists) {
+                  return const Center(child: Text('Group not found'));
+                }
 
                 final groupData = snapshot.data!.data() as Map<String, dynamic>;
                 
@@ -193,71 +193,120 @@ class _ChatScreenState extends State<ChatScreen> {
                       ),
                     ),
                   );
-                }
-
-                return Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Column(
-                    children: [
-                      Expanded(
-                        child: ChatList(
-                          contactUID: contactUID,
-                          groupId: groupId,
+                }else{
+                  return Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: ChatList(
+                            contactUID: contactUID,
+                            groupId: groupId,
+                          ),
                         ),
-                      ),
 
-                      // Typing indicator for group chat
-                      if (isGroupChat)
-                        StreamBuilder<QuerySnapshot>(
-                          stream: FirebaseFirestore.instance
-                              .collection(Constants.groups)
-                              .doc(groupId)
-                              .collection('typing')
-                              .snapshots(),
-                          builder: (context, snapshot) {
-                            if (snapshot.hasError || !snapshot.hasData) {
-                              return const SizedBox.shrink();
-                            }
+                        // Typing indicator for group chat
+                        if (isGroupChat)
+                          StreamBuilder<QuerySnapshot>(
+                            stream: FirebaseFirestore.instance
+                                .collection(Constants.groups)
+                                .doc(groupId)
+                                .collection('typing')
+                                .snapshots(),
+                            builder: (context, snapshot) {
+                              if (snapshot.hasError || !snapshot.hasData) {
+                                return const SizedBox.shrink();
+                              }
 
-                            final typingUsers = snapshot.data!.docs
-                                .where((doc) => doc['isTyping'] == true)
-                                .where((doc) => doc.id != currentUserUID)
-                                .toList();
+                              final typingUsers = snapshot.data!.docs
+                                  .where((doc) => doc['isTyping'] == true)
+                                  .where((doc) => doc.id != currentUserUID)
+                                  .toList();
 
-                            if (typingUsers.isEmpty) {
-                              return const SizedBox.shrink();
-                            }
+                              if (typingUsers.isEmpty) {
+                                return const SizedBox.shrink();
+                              }
 
-                            // Get user names for typing users
-                            return StreamBuilder<QuerySnapshot>(
-                              stream: FirebaseFirestore.instance
-                                  .collection(Constants.users)
-                                  .where(FieldPath.documentId,
-                                      whereIn: typingUsers
-                                          .map((doc) => doc.id)
-                                          .toList())
-                                  .snapshots(),
-                              builder: (context, userSnapshot) {
-                                if (!userSnapshot.hasData) {
-                                  return const SizedBox.shrink();
-                                }
+                              // Get user names for typing users
+                              return StreamBuilder<QuerySnapshot>(
+                                stream: FirebaseFirestore.instance
+                                    .collection(Constants.users)
+                                    .where(FieldPath.documentId,
+                                    whereIn: typingUsers
+                                        .map((doc) => doc.id)
+                                        .toList())
+                                    .snapshots(),
+                                builder: (context, userSnapshot) {
+                                  if (!userSnapshot.hasData) {
+                                    return const SizedBox.shrink();
+                                  }
 
-                                final userDocs = userSnapshot.data!.docs;
-                                final typingNames = userDocs
-                                    .map((doc) => doc.get('name') as String)
-                                    .toList();
+                                  final userDocs = userSnapshot.data!.docs;
+                                  final typingNames = userDocs
+                                      .map((doc) => doc.get('name') as String)
+                                      .toList();
 
-                                String typingText;
-                                if (typingNames.length == 1) {
-                                  typingText = '${typingNames[0]} is typing...';
-                                } else if (typingNames.length == 2) {
-                                  typingText =
-                                      '${typingNames[0]} and ${typingNames[1]} are typing...';
-                                } else {
-                                  typingText =
-                                      '${typingNames.length} people are typing...';
-                                }
+                                  String typingText;
+                                  if (typingNames.length == 1) {
+                                    typingText = '${typingNames[0]} is typing...';
+                                  } else if (typingNames.length == 2) {
+                                    typingText =
+                                    '${typingNames[0]} and ${typingNames[1]} are typing...';
+                                  } else {
+                                    typingText =
+                                    '${typingNames.length} people are typing...';
+                                  }
 
+                                  return Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16.0, vertical: 8.0),
+                                    child: Row(
+                                      children: [
+                                        SizedBox(
+                                          height: 60,
+                                          width: 60,
+                                          child: Lottie.asset(
+                                            AssetsMenager.typingIndicator,
+                                            fit: BoxFit.contain,
+                                          ),
+                                        ),
+                                        Expanded(
+                                          child: Text(
+                                            typingText,
+                                            style: const TextStyle(
+                                                fontStyle: FontStyle.italic),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              );
+                            },
+                          )
+                        else
+                          StreamBuilder<DocumentSnapshot>(
+                            stream: FirebaseFirestore.instance
+                                .collection(Constants.users)
+                                .doc(contactUID)
+                                .snapshots(),
+                            builder: (context, snapshot) {
+                              if (snapshot.hasError) {
+                                return const SizedBox.shrink();
+                              }
+
+                              if (!snapshot.hasData || !snapshot.data!.exists) {
+                                return const SizedBox.shrink();
+                              }
+
+                              final data =
+                              snapshot.data!.data() as Map<String, dynamic>;
+                              final isTyping = data['isTyping'] ?? false;
+                              final typingInChatRoom = data['typingInChatRoom'];
+
+                              if (isTyping &&
+                                  typingInChatRoom == currentUserUID) {
                                 return Padding(
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 16.0, vertical: 8.0),
@@ -271,78 +320,31 @@ class _ChatScreenState extends State<ChatScreen> {
                                           fit: BoxFit.contain,
                                         ),
                                       ),
-                                      Expanded(
-                                        child: Text(
-                                          typingText,
-                                          style: const TextStyle(
-                                              fontStyle: FontStyle.italic),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
+                                      Text(
+                                        '${data['name']} is typing...',
+                                        style: const TextStyle(
+                                            fontStyle: FontStyle.italic),
                                       ),
                                     ],
                                   ),
                                 );
-                              },
-                            );
-                          },
-                        )
-                      else
-                        StreamBuilder<DocumentSnapshot>(
-                          stream: FirebaseFirestore.instance
-                              .collection(Constants.users)
-                              .doc(contactUID)
-                              .snapshots(),
-                          builder: (context, snapshot) {
-                            if (snapshot.hasError) {
+                              }
                               return const SizedBox.shrink();
-                            }
+                            },
+                          ),
 
-                            if (!snapshot.hasData || !snapshot.data!.exists) {
-                              return const SizedBox.shrink();
-                            }
-
-                            final data =
-                                snapshot.data!.data() as Map<String, dynamic>;
-                            final isTyping = data['isTyping'] ?? false;
-                            final typingInChatRoom = data['typingInChatRoom'];
-
-                            if (isTyping &&
-                                typingInChatRoom == currentUserUID) {
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 16.0, vertical: 8.0),
-                                child: Row(
-                                  children: [
-                                    SizedBox(
-                                      height: 60,
-                                      width: 60,
-                                      child: Lottie.asset(
-                                        AssetsMenager.typingIndicator,
-                                        fit: BoxFit.contain,
-                                      ),
-                                    ),
-                                    Text(
-                                      '${data['name']} is typing...',
-                                      style: const TextStyle(
-                                          fontStyle: FontStyle.italic),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }
-                            return const SizedBox.shrink();
-                          },
+                        BottomChatField(
+                          contactUID: contactUID,
+                          contactName: contactName,
+                          contactImage: contactImage,
+                          groupId: groupId,
                         ),
+                      ],
+                    ),
+                  );
+                }
 
-                      BottomChatField(
-                        contactUID: contactUID,
-                        contactName: contactName,
-                        contactImage: contactImage,
-                        groupId: groupId,
-                      ),
-                    ],
-                  ),
-                );
+
               },
             )
           : Padding(

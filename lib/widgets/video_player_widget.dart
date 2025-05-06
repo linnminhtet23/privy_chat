@@ -35,10 +35,13 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
     
     chewieController = ChewieController(
       videoPlayerController: videoPlayerController,
-      aspectRatio: 16 / 9,
+      // aspectRatio: 16 / 9,
       autoPlay: false,
-      allowPlaybackSpeedChanging: true,
+      allowPlaybackSpeedChanging: false,
       showControls: !widget.viewOnly,
+      allowFullScreen: false,
+      allowMuting: true,
+      autoInitialize: true,
       materialProgressColors: ChewieProgressColors(
         playedColor: widget.color,
         handleColor: widget.color,

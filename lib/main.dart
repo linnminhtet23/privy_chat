@@ -2,6 +2,7 @@
 import 'package:adaptive_theme/adaptive_theme.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:privy_chat/authentication/landing_screen.dart';
 import 'package:privy_chat/authentication/login_screen.dart';
 import 'package:privy_chat/authentication/opt_screen.dart';
@@ -22,6 +23,8 @@ import 'package:privy_chat/providers/group_provider.dart';
 import 'package:privy_chat/utilities/global_methods.dart';
 import 'package:provider/provider.dart';
 
+import 'screens/onboarding_screen.dart';
+
 // import 'utils/encryptionutilsnewapproach.dart';
 
 
@@ -36,31 +39,19 @@ import 'package:provider/provider.dart';
 //   log("Handling a background message: ${message.data}");
 // }
 
+// Global variable to track first-time app launch
+bool isFirstTime = true;
+
 void main() async {
-    // Generate RSA key pair
-  // final rsaKeyPair = generateRSAKeyPair();
-  // final publicKey = rsaKeyPair.publicKey;
-  // final privateKey = rsaKeyPair.privateKey;
-
-  // final encodePublicKey = encodePublicKeyToPem(publicKey);
-  //   final encodePrivateKey = encodePrivateKeyToPem(privateKey);
-
-  // final decodePublicKey = decodePublicKeyFromPem(encodePublicKey);
-  //   final decodePrivateKey = decodePrivateKeyFromPem(encodePrivateKey);
-  //   print("Encode Public Key: $encodePublicKey, Encode Private Key: $encodePrivateKey");
-
-  //   print("Decoded Public Key: $decodePublicKey, Decode Private Key: $decodePrivateKey");
-
-  // // Encrypt a message using hybrid encryption
-  // final plaintext = "Hello World!0000";
-  // final encryptedData = hybridEncrypt(plaintext, decodePublicKey);
-  // print("Encrypted Data: $encryptedData");
-
-  // // Decrypt the message using hybrid decryption
-  // final decryptedData = hybridDecrypt(encryptedData, decodePrivateKey);
-  // print("Decrypted Data: $decryptedData");
-
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize SharedPreferences
+  final prefs = await SharedPreferences.getInstance();
+  isFirstTime = prefs.getBool('isFirstTime') ?? true;
+  
+  if (isFirstTime) {
+    await prefs.setBool('isFirstTime', false);
+  }
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
@@ -109,8 +100,9 @@ class MyApp extends StatelessWidget {
         title: 'Privy Chat',
         theme: theme,
         darkTheme: darkTheme,
-        initialRoute: Constants.landingScreen,
+        initialRoute: isFirstTime ? '/' : Constants.landingScreen, // Show onboarding for first time users
         routes: {
+          '/': (context) => const OnboardingScreen(),
           Constants.landingScreen: (context) => const LandingScreen(),
           Constants.loginScreen: (context) => const LoginScreen(),
           Constants.registerScreen: (context) => const RegisterScreen(),

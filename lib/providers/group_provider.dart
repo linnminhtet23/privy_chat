@@ -665,33 +665,42 @@ class GroupProvider extends ChangeNotifier {
   }
 
   // exit group
-  Future<void> exitGroup({
+  Future<(bool, String)> exitGroup({
     required String uid,
   }) async {
     // check if the user is the admin of the group
     bool isAdmin = _groupModel.adminsUIDs.contains(uid);
-    print("isAdmin $isAdmin");
-    print("uid $uid");
-
-    await _firestore
-        .collection(Constants.groups)
-        .doc(_groupModel.groupId)
-        .update({
-      Constants.membersUIDs: FieldValue.arrayRemove([uid]),
-      Constants.adminsUIDs:
-          isAdmin ? FieldValue.arrayRemove([uid]) : _groupModel.adminsUIDs,
-    });
-
-    // remove the user from group members list
-    _groupMembersList.removeWhere((element) => element.uid == uid);
-    // remove the user from group members uid
-    _groupModel.membersUIDs.remove(uid);
-    if (isAdmin) {
-      // remove the user from group admins list
-      _groupAdminsList.removeWhere((element) => element.uid == uid);
-      // remove the user from group admins uid
-      _groupModel.adminsUIDs.remove(uid);
+    
+    // If user is admin and they're the last admin, return false with message
+    if (isAdmin && _groupModel.adminsUIDs.length == 1) {
+      print('You are the last admin. pleas assign other members as an admin');
+      return (false, 'You are the last admin. pleas assign other members as an admin');
     }
-    notifyListeners();
+
+    try {
+      await _firestore
+          .collection(Constants.groups)
+          .doc(_groupModel.groupId)
+          .update({
+        Constants.membersUIDs: FieldValue.arrayRemove([uid]),
+        Constants.adminsUIDs:
+            isAdmin ? FieldValue.arrayRemove([uid]) : _groupModel.adminsUIDs,
+      });
+
+      // remove the user from group members list
+      _groupMembersList.removeWhere((element) => element.uid == uid);
+      // remove the user from group members uid
+      _groupModel.membersUIDs.remove(uid);
+      if (isAdmin) {
+        // remove the user from group admins list
+        _groupAdminsList.removeWhere((element) => element.uid == uid);
+        // remove the user from group admins uid
+        _groupModel.adminsUIDs.remove(uid);
+      }
+      notifyListeners();
+      return (true, 'Successfully left the group');
+    } catch (e) {
+      return (false, 'Failed to leave group: ${e.toString()}');
+    }
   }
 }

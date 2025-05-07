@@ -33,11 +33,14 @@ class ExitGroupCard extends StatelessWidget {
                 if (value) {
                   // exit group
                   final groupProvider = context.read<GroupProvider>();
-                  await groupProvider.exitGroup(uid: uid).whenComplete(() {
-                    showSnackBar(context, 'You have exited the group');
+                  final (success, message) = await groupProvider.exitGroup(uid: uid);
+                  if (success) {
+                    showSnackBar(context, message);
                     // navigate to first screen
                     Navigator.popUntil(context, (route) => route.isFirst);
-                  });
+                  } else {
+                    showSnackBar(context, message);
+                  }
                 }
               },
             );

@@ -1555,11 +1555,21 @@ class ChatProvider extends ChangeNotifier {
             .doc(messageId)
             .update({
           Constants.deletedBy: FieldValue.arrayUnion([currentUserId, contactUID])
-        })
+        }),
+        _firestore
+            .collection(Constants.users)
+            .doc(currentUserId)
+            .collection(Constants.chats)
+            .doc(contactUID)
+            .update({
+          Constants.tempMessage: {currentUserId:'',contactUID:''},
+          Constants.messageType: MessageEnum.text.name,
+        }),
       ]);
 
       // 4. delete the file from storage
       if (messageType != MessageEnum.text.name) {
+        print("message type $messageType");
         await deleteFileFromStorage(
           currentUserId: currentUserId,
           contactUID: contactUID,

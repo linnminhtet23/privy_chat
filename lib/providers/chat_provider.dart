@@ -375,36 +375,66 @@ class ChatProvider extends ChangeNotifier {
         });
 
         // Get group members and send notifications
-        final groupDoc = await _firestore.collection(Constants.groups).doc(groupId).get();
-        final members = List<String>.from(groupDoc.data()?['membersUIDs'] ?? []);
-        print("Member$members");
-        
-        for (var memberId in members) {
-          if (memberId != sender.uid) {
-            final memberDoc = await _firestore.collection('users').doc(memberId).get();
-            final fcmToken = memberDoc.data()?['token'];
-            print("fcmToken${fcmToken}");
-            print("Hisxksmxksx");
-            if (fcmToken != null) {
+        try {
+          final groupDoc = await _firestore.collection(Constants.groups).doc(groupId).get();
+          if (!groupDoc.exists) {
+            throw Exception('Group document not found');
+          }
+
+          final groupData = groupDoc.data();
+          final members = List<String>.from(groupData?['membersUIDs'] ?? []);
+          debugPrint('Sending notifications to ${members.length} group members');
+
+          // Filter out sender and get all member tokens in parallel
+          final memberTokenFutures = members
+              .where((memberId) => memberId != sender.uid)
+              .map((memberId) async {
+            try {
+              final memberDoc = await _firestore.collection('users').doc(memberId).get();
+              final fcmToken = memberDoc.data()?['token'];
+              return {'memberId': memberId, 'token': fcmToken};
+            } catch (e) {
+              debugPrint('Error fetching member token for $memberId: $e');
+              return {'memberId': memberId, 'token': null};
+            }
+          });
+
+          // Wait for all token fetches to complete
+          final memberTokens = await Future.wait(memberTokenFutures);
+
+          // Send notifications in parallel to all members with valid tokens
+          final notificationFutures = memberTokens
+              .where((member) => member['token'] != null)
+              .map((member) async {
+            try {
               await sendNotification(
-                token: fcmToken,
-                title: 'New message in ${groupDoc.data()?['groupName']}',
+                token: member['token'],
+                title: 'New message in ${groupData?['groupName']}',
                 body: '${sender.name}: $message',
                 data: {
                   'notificationType': Constants.groupChatNotification,
                   'groupModel': jsonEncode({
                     'groupId': groupId,
-                    'groupName': groupDoc.data()?['groupName'],
-                    'senderImage': groupDoc.data()?['groupImage'],
-                    'createdAt': groupDoc.data()?['createdAt'],
-                    'membersUIDs': groupDoc.data()?['membersUIDs'],
-                    'adminsUIDs': groupDoc.data()?['adminsUIDs'],
-                    'groupType': groupDoc.data()?['groupType'],
+                    'groupName': groupData?['groupName'],
+                    'senderImage': groupData?['groupImage'],
+                    'createdAt': groupData?['createdAt'],
+                    'membersUIDs': groupData?['membersUIDs'],
+                    'adminsUIDs': groupData?['adminsUIDs'],
+                    'groupType': groupData?['groupType'],
                   }),
                 },
               );
+              debugPrint('Successfully sent notification to member: ${member['memberId']}');
+            } catch (e) {
+              debugPrint('Error sending notification to member ${member['memberId']}: $e');
             }
-          }
+          });
+
+          // Wait for all notifications to be sent
+          await Future.wait(notificationFutures);
+          debugPrint('Completed sending group notifications');
+        } catch (e) {
+          debugPrint('Error in group notification process: $e');
         }
 
         // set loading to true
@@ -843,179 +873,126 @@ class ChatProvider extends ChangeNotifier {
     required String reaction,
     required bool groupId,
   }) async {
-    // set loading to true
-    setLoading(true);
-    // a reaction is saved as senderUID=reaction
-    String reactionToAdd = '$senderUID=$reaction';
-
-    // Get the sender's information for notification
-    final senderDoc = await _firestore.collection('users').doc(senderUID).get();
-    final senderName = senderDoc.data()?['name'] ?? 'Someone';
-
-
     try {
-      // 1. check if its a group message
+      setLoading(true);
+      String reactionToAdd = '$senderUID=$reaction';
+
+      // Get sender's information for notification in parallel
+      final senderDocFuture = _firestore.collection('users').doc(senderUID).get();
+
       if (groupId) {
-        print("inside the group reaction");
-        // 2. get the reaction list from firestore
-        final messageData = await _firestore
+        // Handle group message reaction
+        final messageRef = _firestore
             .collection(Constants.groups)
             .doc(contactUID)
             .collection(Constants.messages)
-            .doc(messageId)
-            .get();
+            .doc(messageId);
 
-        // 3. add the meesaage data to messageModel
-        final message = MessageModel.fromMap(messageData.data()!);
+        final messageDoc = await messageRef.get();
+        if (!messageDoc.exists) {
+          throw Exception('Message not found');
+        }
 
-        // 4. check if the reaction list is empty
-        if (message.reactions.isEmpty) {
-          // 5. add the reaction to the message
-          await _firestore
-              .collection(Constants.groups)
-              .doc(contactUID)
-              .collection(Constants.messages)
-              .doc(messageId)
-              .update({
-            Constants.reactions: FieldValue.arrayUnion([reactionToAdd])
-          });
+        final message = MessageModel.fromMap(messageDoc.data()!);
+        List<String> updatedReactions = List.from(message.reactions);
+        final uids = updatedReactions.map((e) => e.split('=')[0]).toList();
+        final existingIndex = uids.indexOf(senderUID);
+
+        if (existingIndex != -1) {
+          updatedReactions[existingIndex] = reactionToAdd;
         } else {
-          // 6. get UIDs list from reactions list
-          final uids = message.reactions.map((e) => e.split('=')[0]).toList();
+          updatedReactions.add(reactionToAdd);
+        }
 
-          // 7. check if the reaction is already added
-          if (uids.contains(senderUID)) {
-            // 8. get the index of the reaction
-            final index = uids.indexOf(senderUID);
-            // 9. replace the reaction
-            message.reactions[index] = reactionToAdd;
-          } else {
-            // 10. add the reaction to the list
-            message.reactions.add(reactionToAdd);
+        // Update reaction in a single write
+        await messageRef.update({Constants.reactions: updatedReactions});
+
+        // Handle notification if needed
+        if (message.senderUID != senderUID) {
+          final senderDoc = await senderDocFuture;
+          final senderName = senderDoc.data()?['name'] ?? 'Someone';
+          final groupDoc = await _firestore.collection(Constants.groups).doc(contactUID).get();
+          final groupName = groupDoc.data()?['groupName'] ?? 'Group';
+          final senderFCMToken = (await _firestore.collection('users').doc(message.senderUID).get()).data()?['token'];
+
+          if (senderFCMToken != null) {
+            await sendNotification(
+              token: senderFCMToken,
+              title: groupName,
+              body: '$senderName reacted with $reaction to your message',
+              data: {
+                'notificationType': Constants.groupChatNotification,
+                'groupId': contactUID,
+                'messageId': messageId
+              },
+            );
           }
-
-          // 11. update the message
-          await _firestore
-              .collection(Constants.groups)
-              .doc(contactUID)
-              .collection(Constants.messages)
-              .doc(messageId)
-              .update({Constants.reactions: message.reactions});
-
-          // Send notification to message sender if they're not the one reacting
-          if (message.senderUID != senderUID) {
-            final groupDoc = await _firestore.collection(Constants.groups).doc(contactUID).get();
-            final groupName = groupDoc.data()?['groupName'] ?? 'Group';
-            final senderFCMToken = (await _firestore.collection('users').doc(message.senderUID).get()).data()?['token'];
-          
-            if (senderFCMToken != null) {
-              await sendNotification(
-                token: senderFCMToken,
-                title: groupName,
-                body: '$senderName reacted with $reaction to your message',
-                data: {
-                  'notificationType': Constants.groupChatNotification,
-                  'groupId': contactUID,
-                  'messageId': messageId
-                },
-              );
-            }
-          }
-          await _firestore
-              .collection(Constants.groups)
-              .doc(contactUID)
-              .collection(Constants.messages)
-              .doc(messageId)
-              .update({Constants.reactions: message.reactions});
         }
       } else {
-        // handle contact message
-        // 2. get the reaction list from firestore
-        final messageData = await _firestore
+        // Handle personal chat reaction using batch write
+        final batch = _firestore.batch();
+        final senderMessageRef = _firestore
             .collection(Constants.users)
             .doc(senderUID)
             .collection(Constants.chats)
             .doc(contactUID)
             .collection(Constants.messages)
-            .doc(messageId)
-            .get();
+            .doc(messageId);
 
-        // 3. add the meesaage data to messageModel
-        final message = MessageModel.fromMap(messageData.data()!);
+        final contactMessageRef = _firestore
+            .collection(Constants.users)
+            .doc(contactUID)
+            .collection(Constants.chats)
+            .doc(senderUID)
+            .collection(Constants.messages)
+            .doc(messageId);
 
-        // 4. check if the reaction list is empty
-        if (message.reactions.isEmpty) {
-          // 5. add the reaction to the message
-          await _firestore
-              .collection(Constants.users)
-              .doc(senderUID)
-              .collection(Constants.chats)
-              .doc(contactUID)
-              .collection(Constants.messages)
-              .doc(messageId)
-              .update({
-            Constants.reactions: FieldValue.arrayUnion([reactionToAdd])
-          });
+        final messageDoc = await senderMessageRef.get();
+        if (!messageDoc.exists) {
+          throw Exception('Message not found');
+        }
+
+        final message = MessageModel.fromMap(messageDoc.data()!);
+        List<String> updatedReactions = List.from(message.reactions);
+        final uids = updatedReactions.map((e) => e.split('=')[0]).toList();
+        final existingIndex = uids.indexOf(senderUID);
+
+        if (existingIndex != -1) {
+          updatedReactions[existingIndex] = reactionToAdd;
         } else {
-          // 6. get UIDs list from reactions list
-          final uids = message.reactions.map((e) => e.split('=')[0]).toList();
+          updatedReactions.add(reactionToAdd);
+        }
 
-          // 7. check if the reaction is already added
-          if (uids.contains(senderUID)) {
-            // 8. get the index of the reaction
-            final index = uids.indexOf(senderUID);
-            // 9. replace the reaction
-            message.reactions[index] = reactionToAdd;
-          } else {
-            // 10. add the reaction to the list
-            message.reactions.add(reactionToAdd);
-          }
+        // Update both copies of the message in a single batch
+        batch.update(senderMessageRef, {Constants.reactions: updatedReactions});
+        batch.update(contactMessageRef, {Constants.reactions: updatedReactions});
+        await batch.commit();
 
-          // 11. update the message to sender firestore location
-          await _firestore
-              .collection(Constants.users)
-              .doc(senderUID)
-              .collection(Constants.chats)
-              .doc(contactUID)
-              .collection(Constants.messages)
-              .doc(messageId)
-              .update({Constants.reactions: message.reactions});
+        // Handle notification if needed
+        if (message.senderUID != senderUID) {
+          final senderDoc = await senderDocFuture;
+          final senderName = senderDoc.data()?['name'] ?? 'Someone';
+          final contactFCMToken = (await _firestore.collection('users').doc(message.senderUID).get()).data()?['token'];
 
-          // 12. update the message to contact firestore location
-          await _firestore
-              .collection(Constants.users)
-              .doc(contactUID)
-              .collection(Constants.chats)
-              .doc(senderUID)
-              .collection(Constants.messages)
-              .doc(messageId)
-              .update({Constants.reactions: message.reactions});
-
-          // Send notification to message sender if they're not the one reacting
-          if (message.senderUID != senderUID) {
-            final contactFCMToken = (await _firestore.collection('users').doc(message.senderUID).get()).data()?['token'];
-          
-            if (contactFCMToken != null) {
-              await sendNotification(
-                token: contactFCMToken,
-                title: senderName,
-                body: 'reacted with $reaction to your message',
-                data: {
-                  'notificationType': Constants.chatNotification,
-                  'contactUID': senderUID,
-                  'contactName': senderName,
-                  'messageId': messageId
-                },
-              );
-            }
+          if (contactFCMToken != null) {
+            await sendNotification(
+              token: contactFCMToken,
+              title: senderName,
+              body: 'reacted with $reaction to your message',
+              data: {
+                'notificationType': Constants.chatNotification,
+                'contactUID': senderUID,
+                'contactName': senderName,
+                'messageId': messageId
+              },
+            );
           }
         }
       }
-
-      // set loading to false
-      setLoading(false);
     } catch (e) {
-      print(e.toString());
+      print('Error in sendReactionToMessage: ${e.toString()}');
+    } finally {
+      setLoading(false);
     }
   }
 

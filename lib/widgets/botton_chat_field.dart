@@ -203,6 +203,8 @@ class _BottomChatFieldState extends State<BottomChatField> {
 
   // stop recording audio
   void stopRecording() async {
+    final hasPermission = await checkMicrophonePermission();
+    if (hasPermission) {
     await _soundRecord!.stop();
     setState(() {
       isRecording = false;
@@ -212,6 +214,7 @@ class _BottomChatFieldState extends State<BottomChatField> {
     sendFileMessage(
       messageType: MessageEnum.audio,
     );
+    }
   }
 
   void selectImage(bool fromCamera) async {

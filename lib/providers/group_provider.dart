@@ -332,16 +332,25 @@ class GroupProvider extends ChangeNotifier {
 
   // remove member from group
   Future<void> removeGroupMember({required UserModel groupMember}) async {
+    // Remove from members list and UIDs
     _groupMembersList.remove(groupMember);
-    // also remove this member from admins list if he is an admin
-    _groupAdminsList.remove(groupMember);
     _groupModel.membersUIDs.remove(groupMember.uid);
-
-    // remo from temp lists
     _tempGroupMembersList.remove(groupMember);
-    _tempGroupAdminUIDs.remove(groupMember.uid);
 
-    // add  this member to the list of removed members
+    // Check if the member is also an admin
+    bool isAdmin = _groupAdminsList.any((admin) => admin.uid == groupMember.uid);
+    if (isAdmin) {
+      // Remove from admins list and UIDs
+      _groupAdminsList.remove(groupMember);
+      _groupModel.adminsUIDs.remove(groupMember.uid);
+      _tempGroupAdminUIDs.remove(groupMember.uid);
+      
+      // Add to removed admins lists
+      _tempRemovedAdminsList.add(groupMember);
+      _tempRemovedAdminsUIDs.add(groupMember.uid);
+    }
+
+    // Add to removed members lists
     _tempRemovedMembersList.add(groupMember);
     _tempRemovedMemberUIDs.add(groupMember.uid);
 
@@ -430,7 +439,7 @@ class GroupProvider extends ChangeNotifier {
       createdAt: DateTime.now(),
       isPrivate: true,
       editSettings: true,
-      approveMembers: false,
+      approveMembers: true,
       lockMessages: false,
       requestToJoing: false,
       membersUIDs: [],
@@ -489,6 +498,16 @@ class GroupProvider extends ChangeNotifier {
         final String imageUrl = await storeFileToStorage(
             file: fileImage, reference: '${Constants.groupImages}/$groupId');
         newGroupModel.groupImage = imageUrl;
+      }
+
+      // Set default values based on group type
+      
+      if (newGroupModel.isPrivate) {
+        newGroupModel.approveMembers = false;
+        newGroupModel.requestToJoing = true;
+      } else {
+        newGroupModel.approveMembers = true;
+        newGroupModel.requestToJoing = false;
       }
 
       // add the group admins

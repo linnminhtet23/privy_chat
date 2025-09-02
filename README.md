@@ -39,6 +39,7 @@
    ```bash
 [   git clone https://github.com/your-username/privy_chat.git
 ](https://github.com/linnminhtet23/privy_chat.git)
+
 cd privy_chat
    ```
 

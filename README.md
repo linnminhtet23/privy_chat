@@ -37,8 +37,9 @@
 1. **Clone the repository**
 
    ```bash
-   git clone https://github.com/your-username/privy_chat.git
-   cd privy_chat
+[   git clone https://github.com/your-username/privy_chat.git
+](https://github.com/linnminhtet23/privy_chat.git)
+cd privy_chat
    ```
 
 2. **Install dependencies**

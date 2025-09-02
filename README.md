@@ -73,7 +73,3 @@ Contributions are welcome! Please open an issue or submit a pull request for imp
 ## 📜 License
 
 This project is licensed under the **MIT License** – feel free to use and modify.
-
----
-
-Would you like me to make this **developer-focused** (setup-heavy, like above) or more **product-focused** (like for showcasing on GitHub with visuals, badges, and a demo section)?
